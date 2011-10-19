@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8" />
@@ -7,32 +7,31 @@
     <link rel="stylesheet" href="/css/default.css" />
     <link media="all" rel="stylesheet" href="/fonts/raleway/stylesheet.css" type="text/css" />
     <link media="all" rel="stylesheet" href="/fonts/quicksand/stylesheet.css" type="text/css" />
-    <script src="/js/jquery.min.js" type="text/javascript"></script>
-    <script src="/js/jquery-ui.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src='/js/glMatrix-0.9.5.min.js'></script>   
     <script src="/js/default.js" type='text/javascript'></script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision highp float;
+        #endif
+
+        void main(void) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.5);
+        }
+    </script>
+    <script id="shader-vs" type="x-shader/x-vertex" src='/webgl/vertex'>
+        attribute vec3 aVertexPosition;
+
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+
+        void main(void) {
+            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        }
+    </script>
 </head>
-<body>
+<body onload='Physico.init()'>
 
-    <h1 class='title'></h1>
-
-    <div id="objectList">
-    </div>
-
-    <div class="help c">
-	    <ul id="lang-list">
-    		<li id="ro" class="lang">Ro</li>
-		<li id="en" class="lang">En</li>
-	    </ul>
-    	<div id="cont"></div>
-    </div>
-
-    <div class="c">
-	    <div id="cont">
-	    	<h4>Developer Notes :</h4>
-		<p>This thing is under developement, so do NOT expect it to work on some crappy old browser, and enspecially IE</p>
-		<p>It's been tested on Firefox Nightly (9.0) and Chrome Beta(14.0)</p>
-	    </div>
-    </div>
+    <canvas id='gl-canvas'></canvas>
 
     <div id="objects" class='settings'>
     <div class="settings-menu">

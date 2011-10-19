@@ -31,18 +31,20 @@
     }
 }
 
-
 Physico = {
     init: function () {
         this.ObjectList.addObject();
-
+        this.gl = new Physico.GL();
+        Physico.start();
+        return this;
+    },
+    start: function(){        
         Physico.Animator.AnimationTimer = new Physico.Timer();
         Physico.Animator.AnimationTimer.animate = function () {
             for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
+            Physico.gl.drawScene();
         }
         Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
-
-        return this;
     },
     globalFreeze: function(timer)    {
         this.globalTimerStop = 1
@@ -55,11 +57,9 @@ Physico = {
     timers: [],
     timerc: 0,
     globalTimerStop: 0,
-    globalTimerException: -1,
+    globalTimerException: -1
 }
-Physico.Animator = {
-
-}
+Physico.Animator = { }
 
 Physico.Timer = function () {
 
@@ -70,13 +70,14 @@ Physico.Timer = function () {
     this.timer = null
     this.working = 0
     this.startTimer = function () {
-        this.working = 1; var args = []; Array.prototype.push.apply(args, arguments);
+        this.working = 1;var args = [];Array.prototype.push.apply(args, arguments);
         func = args.shift();
         args = JSON.stringify(args); 
         Physico.timers[this.timerid].repeat(func, args);
-    }.bind(this)
+    }
+    this.startTimer.bind(this)
     this.repeat = function (func, args) {
-        if (!this.working) return; argv = JSON.parse(args);
+        if (!this.working) return;argv = JSON.parse(args);
         if (!Physico.globalTimerStop ||this.timerid == Physico.globalTimerException)   func(argv);
         this.timer = setTimeout("Physico.timers[" + this.timerid + "].repeat(" + func + ", '" + args + "')", 1);
     }.bind(this)
@@ -114,15 +115,15 @@ Physico.ObjectList = {
 	for(o in this.objects) this.objects[o].scramble();
     }, 
     colors: [
-	"rgba(0, 0, 0, 0.7)",
-	"rgba(256, 0, 0, 0.7)",
-	"rgba(0, 256, 0, 0.7)",
-	"rgba(0, 0, 256, 0.7)", 
-	"rgba(150, 0, 150, 0.7)",
-	"rgba(256, 0, 256, 0.7)",
-	"rgba(256, 150, 0, 0.7)",
-	"rgba(200, 200, 200, 0.6)"
-	    ],
+        [0, 0, 0, 0.7],
+        [256, 0, 0, 0.7],
+        [0, 256, 0, 0.7],
+        [0, 0, 256, 0.7],
+        [150, 0, 150, 0.7],
+        [256, 0, 256, 0.7],
+        [256, 150, 0, 0.7],
+        [200, 200, 200, 0.7]
+    ]
 }
 
 Physico.Animator.Force = function(ix, iy, r, rx, ry, rlx, rly){
@@ -138,26 +139,29 @@ Physico.Animator.Force = function(ix, iy, r, rx, ry, rlx, rly){
     rly = this.resolveInput(rly);
     
 
-    this.x = ix; this.ix = ix; this.rx = rx ? rx : 0; this.sx = this.x >= 0 ? 1 : 0; this.rsx = this.rx >= 0 ? 1 : 0; this.rlx = rlx ? rlx : 0;
-    this.y = iy; this.iy = iy; this.ry = ry ? ry : 0; this.sy = this.y >= 0 ? 1 : 0; this.rsy = this.ry >= 0 ? 1 : 0; this.rly = rly ? rly : 0;
+    this.x = ix;this.ix = ix;this.rx = rx ? rx : 0;this.sx = this.x > 0 ? 1 : 0;this.rsx = this.rx > 0 ? 1 : 0;this.rlx = rlx ? rlx : 0;
+    this.y = iy;this.iy = iy;this.ry = ry ? ry : 0;this.sy = this.y > 0 ? 1 : 0;this.rsy = this.ry > 0 ? 1 : 0;this.rly = rly ? rly : 0;
     this.act = function (object) {
 
-        if (this.x >= 0 && this.sx || this.x < 0 && !this.sx) {
-            if (object.x <= window.innerWidth - 30) object.x += this.x;
+        if (this.x >= 0 && this.sx || this.x <= 0 && !this.sx) {
+            if (object.x <= window.innerWidth - 30) object.x += this.x; 
             if (this.isRed && (this.rsx && this.x > this.rlx || !this.rsx && this.x < this.rlx)) this.x -= rx;
             if (object.x > window.innerWidth - 30) this.x = this.ix;
+            
         }
-        if (this.y >= 0 && this.sy || this.y < 0 && !this.sy) {
-            if (object.y <= window.innerHeight - 30) object.y += this.y;  
+        if (this.y >= 0 && this.sy || this.y <= 0 && !this.sy) {
+            if (object.y <= window.innerHeight - 30) object.y += this.y;
             if (this.isRed && (this.rsy && this.y > this.rly || !this.rsy && this.y < this.rly)) this.y -= ry;
             if (object.y > window.innerHeight - 30) this.y = this.iy;
         }
+        
     }.bind(this)
 
     this.reset = function()	{
 	this.x = this.ix;
 	this.y = this.iy;
-    }.bind(this)
+    }
+    this.reset.bind(this)
 
 }
 
@@ -165,31 +169,29 @@ Physico.Animator.Applicator = function(object) {
     this.attObj = object;
     this.forces = [], this.fc = 0
     this.attForce = function (ix, iy, r, name, rx, ry, rlx, rly) {
-		this.forces[this.fc] = []; this.forces[this.fc]["name"] = name;
+		this.forces[this.fc] = [];this.forces[this.fc]["name"] = name;
 		this.forces[this.fc]["force"] = new Physico.Animator.Force(ix, iy, r, rx, ry, rlx, rly);
-		this.attObj.elem.find(".info > .content#forces").append("<li id='"+name+"'><strong>"+name+"</strong><br>From : ("+this.forces[this.fc]["force"].ix+", "+this.forces[this.fc]["force"].iy+") to ("+this.forces[this.fc]["force"].rlx+", "+this.forces[this.fc]["force"].rly+")</li>");
 		this.fc++;
-    }.bind(this)
+    }
+    this.attForce.bind(this)
     this.remForce = function (name) {
         for (i = 0; i <= this.fc; i++)
             if (this.forces[i]["name"] == name) {
                 this.forces.splice(i, 1);
                 this.fc--;
         }
-	console.log(this.forces);
-	this.attObj.elem.find(".info > .content#forces #" +name).remove();
     }.bind(this)
     this.appForces = function (args) {
 	for(force in this.forces)	{
 		this.forces[force]["force"].act(this.attObj);
-		this.attObj.move(this.x, this.y);
 	}
+        this.attObj.move();
     }.bind(this);
     this.resetForces = function()	{
 	for(force in this.forces) this.forces[force].force.reset(); 
     }.bind(this)
     this.hasForce = function(name)	{
-	for(f in this.forces) { console.log(this.forces[f]["name"]); if (this.forces[f]["name"] == name) return true;}
+	for(f in this.forces) if (this.forces[f]["name"] == name) return true;
 	return false;
     }
     this.checkEnvForces = function()	{
@@ -211,8 +213,8 @@ Physico.Animator.EnvForces = {
         "y": 0,
         "r": 1,
         "rx": 0,
-        "ry": -0.1,
-        "rly": 9.8, 
+        "ry": 0.1,
+        "rly": -9.8, 
 	"rlx": 0
     },
     "wind": {
@@ -223,7 +225,7 @@ Physico.Animator.EnvForces = {
         "ry": 0,
         "rlx": [3, 15],
         "rly": 0
-    },
+    }
 }
 
 Physico.Animator.envForcesActive = [];
@@ -250,107 +252,152 @@ Physico.Animator.ToggleEnvForce = function (force) {
 Physico.Object = function(number) {
     
     this.id = number;
-    jQuery("body").append("<div class='ball' id='object-" + this.id + "'><div class='info'><h1>Forces</h1><ul class='content' id='forces'></ul><h1>Data</h1><ul class='content' id='data'></ul></div></div>");
-    this.elem = jQuery("#object-" + this.id);
-    this.elem.css("border-color", Physico.ObjectList.colors[Math.round(Math.random() * Physico.ObjectList.colors.length)]);
     
     this.scramble = function()	{
 	this.x = Math.round(70 + Math.random() * (window.innerWidth - 100));
 	this.y = Math.round(70 + Math.random() * (window.innerHeight - 100));
-	this.elem.css("top", this.y).css("left", this.x);
     }.bind(this)
 
     this.scramble(); 
-    this.ix = this.x; this.px = [25, 25, 25, 25, 25];
-    this.iy = this.y; this.py = [25, 25, 25, 25, 25];
+    this.ix = this.x; this.rx = this.x - window.innerHeight / 2 
+    this.iy = this.y; this.ry = this.y - window.innerHeight / 2 
+    this.color = Physico.ObjectList.colors[Math.round(Math.random() * Physico.ObjectList.colors.length)];
 	
     this.attachedTimer = null;
-
-    this.move = function (x, y) {
-        if (this.x >= window.innerWidth - 30) this.x = window.innerWidth - 30;
-        if (this.y >= window.innerHeight - 30) this.y = window.innerHeight - 30;
-       	if (this.y >= window.innerHeight - 30 || this.x >= window.innerWidth - 30) this.applicator.resetForces();
-       	this.ix = this.x; this.iy = this.y;
-        this.elem.css("left", this.x + "px");
-        this.elem.css("top", this.y + "px");
-    }.bind(this)
-
-    this.elem.draggable({
-        start: function (event, ui) {
-            this.attachedTimer = new Physico.dragTimer(); Physico.globalFreeze(this.attachedTimer.timerid);
-            this.attachedTimer.startTimer(this.attachedTimer.drag);
-        }.bind(this),
-        drag: function (event, ui) {
-            this.attachedTimer.dragDistance++;
-            this.x = parseInt(this.elem.css("left"));
-            this.y = parseInt(this.elem.css("top"));
-            if (this.attachedTimer.dragDistance > 4) {
-                this.px[4] = this.px[3];
-                this.py[4] = this.py[3];
-            }
-            if (this.attachedTimer.dragDistance > 3) {
-                this.px[3] = this.px[2];
-                this.py[3] = this.py[2];
-            }
-            if (this.attachedTimer.dragDistance > 2) {
-                this.px[2] = this.px[1];
-                this.py[2] = this.py[1];
-            }
-            if (this.attachedTimer.dragDistance > 1) {
-                this.px[1] = this.px[0];
-                this.py[1] = this.py[0];
-                this.attachedTimer.acDD = this.attachedTimer.acDD + Math.sqrt(Math.pow(this.px[0] - this.x, 2) + Math.pow(this.py[0] - this.y, 2));
-            }
-            if (this.attachedTimer.dragDistance > 0) {
-                this.px[0] = this.x;
-                this.py[0] = this.y;
-            }
-        }.bind(this),
-        stop: function (event, ui) {
-            this.attachedTimer.stopTimer(); Physico.globalUnFreeze();
-            var speed = this.attachedTimer.acDD / this.attachedTimer.dragTime / 100;
-            var ox = this.px[4] - this.x;
-            var oy = this.py[4] - this.y;
-            console.log("");
-            this.attachedTimer = null;
-            this.ix = this.x;
-            this.iy = this.y;
-	    this.applicator.resetForces();
-        }.bind(this)
-    });
-
-        this.applicator = new Physico.Animator.Applicator(this);
-	this.applicator.checkEnvForces();
-	this.terminate = function()	{
-		this.elem.remove();
-
-		this.aplicator = null;
-		this.attachedTimer = null;
-	}
+    this.move = function(x, y) {this.rx = x - window.innerHeight / 2; this.ry = y - window.innerHeight / 2  }
+    
+    this.applicator = new Physico.Animator.Applicator(this);
+    this.applicator.checkEnvForces();
+    this.terminate = function()	{
+        this.aplicator = null;
+        this.attachedTimer = null;
+    }
 };
 
-/*
-(function () {
-    "use strict";
+Physico.GL = function(id) {
+    canvas = document.getElementById(id?id:"gl-canvas");
+    canvas.width = window.innerWidth;canvas.height = window.innerHeight;
+    gl = null;shaderProgram = null;buffer = null;pMatrix = mat4.create();mvMatrix = mat4.create();
+    
+    this.l = {
+        colors: [],
+        offsets: [],
+        head: 0
+    }
+    
+    
+    this.getShader = function(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
 
-    function init() {
-        jQuery("body").prepend("<h1>Starting App</h1>");
-        WinJS.UI.processAll();
-        Physico.init();
-        WinJS.Application.start();
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
+    this.setMatrixUniforms = function() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
     }
 
-    document.addEventListener("DOMContentLoaded", init, false);
-})(); */
+    
+    this.initGL = function(){        
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+            console.log(gl)
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(");
+        }
+    }    
+    this.initShaders = function(){        
+        var fragmentShader = this.getShader(gl, "shader-fs");
+        var vertexShader = this.getShader(gl, "shader-vs");
 
-jQuery(document).ready(function(){
-	jQuery("body h1.title").text("Starting App");
-	Physico.init();
-	jQuery("body h1.title").text("Physico Engine - Loaded");
-	jQuery(".c").draggable();
-	jQuery(".help").find(".lang").click(function()	{
-		elem = jQuery(this); 
-		jQuery(".help.c > #cont").load("/help."+elem.attr("id")+".html");
-	});
-	jQuery(".help.c .lang#en").click();
-});
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+
+        gl.useProgram(shaderProgram);
+
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    }
+    this.initBuffer = function(){
+        buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        var vertices = [];
+        var cos, sin;
+        for( i = 0; i <= 180 * 4; i++)  {
+            cos = Math.cos(i)
+            sin = Math.sin(i)
+            vertices.push(-cos, -sin, 0.0, cos, sin, 0.0);
+        }
+//        vertices = [
+//             1.0,  1.0,  0.0,
+//            -1.0,  1.0,  0.0,
+//             1.0, -1.0,  0.0,
+//            -1.0, -1.0,  0.0
+//        ];
+        vertices = new Float32Array(vertices);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        buffer.itemSize = 3;
+        buffer.numItems = 180 * 4;
+    }
+    this.drawScene = function() {
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);        
+        mat4.identity(mvMatrix);
+        mat4.translate(mvMatrix, [0, 0, -45])
+        for (obj in Physico.ObjectList.objects) {
+            obj = Physico.ObjectList.objects[obj];
+//            mat4.translate(mvMatrix, [0, 0, 0]);
+            mat4.translate(mvMatrix, [(obj.x - window.innerWidth / 2) / 100, (obj.y - window.innerHeight / 2) / 100, 0]);
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, buffer.itemSize, gl.FLOAT, false, 0, 0);
+            this.setMatrixUniforms();
+
+            gl.drawArrays(gl.LINES, 0, buffer.numItems);
+        }        
+    }
+        
+    this.initGL();this.initShaders();this.initBuffer();      
+    
+}
