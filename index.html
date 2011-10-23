@@ -14,30 +14,42 @@
         precision highp float;
         #endif
 
+        varying vec4 vColor;
+        
         void main(void) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.5);
+            gl_FragColor = vColor;
         }
     </script>
     <script id="shader-vs" type="x-shader/x-vertex" src='/webgl/vertex'>
-        attribute vec3 aVertexPosition;
+        attribute vec3 vertexPosition;
+        attribute vec4 vertexColor;
 
         uniform mat4 uMVMatrix;
         uniform mat4 uPMatrix;
+        
+        varying vec4 vColor;
 
         void main(void) {
-            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+            gl_Position = uPMatrix * uMVMatrix * vec4(vertexPosition, 1.0);
+            vColor = vertexColor;
         }
     </script>
 </head>
 <body onload='Physico.init()'>
-
-    <canvas id='gl-canvas'></canvas>
 
     <div id="objects" class='settings'>
     <div class="settings-menu">
         <button onclick="Physico.ObjectList.addObject()" >
             <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
             <span class="win-label">New Object</span>
+        </button>
+        <button onclick="Physico.ObjectList.addObjects(100)" >
+            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
+            <span class="win-label">New 100 Objects</span>
+        </button>
+        <button onclick="Physico.ObjectList.addObjects(1000)" >
+            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
+            <span class="win-label">New 1000 Objects</span>
         </button>
         <button onclick="Physico.ObjectList.removeObject()" >
             <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
@@ -47,9 +59,17 @@
             <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
             <span class="win-label">Toggle Gravity</span>
         </button>
+        <button onclick="Physico.Animator.ToggleEnvForce('repulse')" >
+            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
+            <span class="win-label">Toggle Repulse</span>
+        </button>
         <button onclick="Physico.Animator.ToggleEnvForce('wind')" >
             <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
             <span class="win-label">Toggle Wind</span>
+        </button>
+        <button onclick="Physico.Animator.ToggleEnvForce('inverse-wind')" >
+            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
+            <span class="win-label">Toggle Inverse Wind</span>
         </button>
         <button onclick="Physico.ObjectList.scrambleObjects()" >
             <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>

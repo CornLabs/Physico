@@ -50,10 +50,11 @@
 	right: 0;
 	height: 0;
 	padding-bottom: 50px;
-	background: #eee;
+	background: rgba(100, 100, 100, 0.7);
 	position: fixed;
 	-moz-transition: all .5s ease-in-out;
 	-webkit-transition: all .5s ease-in-out;
+        z-index: 1000;
 }
 .settings-menu{
 	height: 0;
@@ -64,7 +65,7 @@
 	-webkit-transition: all .5s ease-in-out;
 }
 .settings:hover{
-	background: #888;
+	background: rgba(0, 0, 0, 0.2);
 }
 .settings button{
 	display: inline-block;
