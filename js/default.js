@@ -208,14 +208,10 @@ Physico.ObjectList = {
 	for(o in this.objects) this.objects[o].scramble();
     }, 
     colors: [
-        [0, 0, 0, 0.7],
-        [256, 0, 0, 0.7],
-        [0, 256, 0, 0.7],
-        [0, 0, 256, 0.7],
-        [150, 0, 150, 0.7],
-        [256, 0, 256, 0.7],
-        [256, 150, 0, 0.7],
-        [200, 200, 200, 0.7]
+        [[0.5, 0.7, 1.0, 0.7], [0, 0.2, 0.7, 0.9]],
+        [[0.2, 0.2, 0.2, 0.7], [0, 0, 0, 0.9]],
+        [[0.7, 0.0, 0.02, 0.7], [0.2, 0.0, 0.0, 1.0]],
+        [[0.2, 0.7, 0.0, 0.7], [0.0, 0.3, 0.0, 1.0]]
     ]
 }
 
@@ -335,7 +331,7 @@ Physico.Animator.EnvForces = {
         "ry": 0,
         "rlx": [-3, -10],
         "rly": 0
-    },
+    }
 }
 
 Physico.Animator.envForcesActive = [];
@@ -362,6 +358,7 @@ Physico.Animator.ToggleEnvForce = function (force) {
 Physico.Object = function(number) {
     
     this.id = number;
+    this.color = Math.round(Math.random() * (Physico.ObjectList.colors.length - 1));
     
     this.scramble = function()	{
 	this.x = Math.round(70 + Math.random() * (window.innerWidth - 100));
@@ -372,7 +369,6 @@ Physico.Object = function(number) {
     this.scramble(); 
     this.ix = this.x;this.rx = this.x - window.innerHeight / 2 
     this.iy = this.y;this.ry = this.y - window.innerHeight / 2 
-    this.color = Physico.ObjectList.colors[Math.round(Math.random() * Physico.ObjectList.colors.length)];
 	
     this.attachedTimer = null;
     this.move = function(x, y) {this.rx = x - window.innerHeight / 2;this.ry = y - window.innerHeight / 2}
@@ -489,16 +485,35 @@ Physico.GL = function() {
         
        
         
-        cBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-        var vertices = [0.2, 0.5, 1.0, 0.5];
-        for(i = 0; i <= 100; i++)   {
-            vertices.push(0.0, 0.2, 0.7, 1.0);
+        var vertices = [];
+        for (j = 0; j < Physico.ObjectList.colors.length; j++)  {
+            vertices[j] = [];
+                vertices[j].push(Physico.ObjectList.colors[j][0][0], Physico.ObjectList.colors[j][0][1], Physico.ObjectList.colors[j][0][2], Physico.ObjectList.colors[j][0][3])
+            for(i = 0; i <= 100; i++)   {
+                    vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
+            }
         }
-        cBuffer.numItems = 102;
-        vertices = new Float32Array(vertices);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-        cBuffer.itemSize = 4;    
+        cBuffer = []; console.log(vertices)
+        for(j = 0; j < Physico.ObjectList.colors.length; j++)   {
+            cBuffer[j] = gl.createBuffer();
+            v = new Float32Array(vertices[j]);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer[j]);
+            gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);      
+            cBuffer[j].numItems = 102;
+            cBuffer[j].itemSize = 4;      
+            console.log(cBuffer[j])
+        }
+//        vertices = [0.5, 0.8, 1.0, 1.0]
+//        for(i = 0; i <= 100; i++)
+//            vertices.push(0.0, 0.2, 0.7, 0.7)
+//        vertices = new Float32Array(vertices);
+//        cBuffer = gl.createBuffer();
+//        gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+//        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+//        cBuffer.itemSize = 4;
+//        cBuffer.numItems = 101;
+//        console.log(cBuffer)
         
         pbBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, pbBuffer);
@@ -536,11 +551,10 @@ Physico.GL = function() {
             obj = Physico.ObjectList.objects[obj];
 //            mat4.translate(mvMatrix, [0, 0, 0]);
             mat4.translate(mvMatrix, [(obj.x - window.innerWidth / 2) / 25, (obj.y - window.innerHeight / 2) / 150, -obj.z]);
-            
             gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, pBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer[obj.color]);
+            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cBuffer[obj.color].itemSize, gl.FLOAT, false, 0, 0);
             this.setMatrixUniforms();
             gl.drawArrays(gl.TRIANGLE_FAN, 0, pBuffer.numItems);
             
