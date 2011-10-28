@@ -1,53 +1,9 @@
-﻿if (!Array.prototype.indexOf) {
-    Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
-        "use strict";
-        if (this === void 0 || this === null) {
-            throw new TypeError();
-        }
-        var t = Object(this);
-        var len = t.length >>> 0;
-        if (len === 0) {
-            return -1;
-        }
-        var n = 0;
-        if (arguments.length > 0) {
-            n = Number(arguments[1]);
-            if (n !== n) { // shortcut for verifying if it's NaN
-                n = 0;
-            } else if (n !== 0 && n !== Infinity && n !== -Infinity) {
-                n = (n > 0 || -1) * Math.floor(Math.abs(n));
-            }
-        }
-        if (n >= len) {
-            return -1;
-        }
-        var k = n >= 0 ? n : Math.max(len - Math.abs(n), 0);
-        for (; k < len; k++) {
-            if (k in t && t[k] === searchElement) {
-                return k;
-            }
-        }
-        return -1;
-    }
-}
-
-Physico = {
+﻿Physico = {
     canvas: null,
     menu: null,
     init: function () {
-        Physico.createElements();
-        this.ObjectList.addObject();
-        this.gl = new Physico.GL();
-        Physico.start();
+        Physico.loadShaders();
         return this;
-    },
-    start: function(){        
-        Physico.Animator.AnimationTimer = new Physico.Timer();
-        Physico.Animator.AnimationTimer.animate = function () {
-            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
-            Physico.gl.drawScene();
-        }
-        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
     },
     globalFreeze: function(timer)    {
         this.globalTimerStop = 1
@@ -88,7 +44,6 @@ Physico = {
             m = Physico.getMouseCoords(e);
             Physico.scene[0] += (m.x - Physico.sceneDrag.x) / 250;
             Physico.scene[1] -= (m.y - Physico.sceneDrag.y) / 250;
-            console.log(Physico.scene);
         }
         this.canvas.onmousedown = function(e)   {
             Physico.sceneDrag = Physico.getMouseCoords(e);            
@@ -109,27 +64,32 @@ Physico = {
         }
         document.onkeydown = function(e) {
             switch(e.keyCode)   {
-                case 33: Physico.scene[2] -= 1;
-                        break;
-                case 34: Physico.scene[2] += 1;
-                        break;
-                case 37: Physico.scene[0] -= 1;
-                        break;
-                case 38: Physico.scene[1] += 1;
-                        break;
-                case 39: Physico.scene[0] += 1;
-                        break;
-                case 40: Physico.scene[1] -= 1;
-                        break;
-                case 46: Physico.scene = [0, 0, -15]
-                        break;
+                case 33:
+                    Physico.scene[2] -= 1;
+                    break;
+                case 34:
+                    Physico.scene[2] += 1;
+                    break;
+                case 37:
+                    Physico.scene[0] -= 1;
+                    break;
+                case 38:
+                    Physico.scene[1] += 1;
+                    break;
+                case 39:
+                    Physico.scene[0] += 1;
+                    break;
+                case 40:
+                    Physico.scene[1] -= 1;
+                    break;
+                case 46:
+                    Physico.scene = [0, 0, -15]
+                    break;
             }
         }
         var mousewheelevt=(/Firefox/i.test(navigator.userAgent))? "DOMMouseScroll" : "mousewheel" 
         document.addEventListener(mousewheelevt, function(e){
-            console.log(e)
             Physico.scene[2] -= (e.wheelDeltaY ? e.wheelDeltaY / 250 : -e.detail / 3);
-            console.log(e.wheelDeltaY)
             e.preventDefault();
         }, false)
 
@@ -141,13 +101,24 @@ Physico = {
             y: e.clientY + document.body.scrollTop + document.body.clientTop
         }
     },
+    loadShaders: function()	{
+        Physico.shaderLoader.loadFiles(
+            Physico.webglshaders, 
+            Physico.shaderLoader.appendShaders, 
+            function(url) {
+                alert("Couldn't load " + url + " component ... shutting down.")
+            },
+            Physico.shaderLoader.completeLoad
+            );
+    },
     timers: [],
     timerc: 0,
     globalTimerStop: 0,
     globalTimerException: -1,
     scene: [0, 0, -15],
     sceneDrag: null,
-    sceneZoom: 1
+    sceneZoom: 1,
+    webglshaders: [['/webgl/fragment', 'x-shader/x-fragment'], ['/webgl/vertex', 'x-shader/x-vertex']]
 }
 Physico.Animator = { }
 
@@ -160,22 +131,24 @@ Physico.Timer = function () {
     this.timer = null
     this.working = 0
     this.startTimer = function () {
-        this.working = 1;var args = [];Array.prototype.push.apply(args, arguments);
+        this.working = 1;
+        var args = [];
+        Array.prototype.push.apply(args, arguments);
         func = args.shift();
         args = JSON.stringify(args); 
         Physico.timers[this.timerid].repeat(func, args);
     }
-    this.startTimer.bind(this)
     this.repeat = function (func, args) {
-        if (!this.working) return;argv = JSON.parse(args);
+        if (!this.working) return;
+        argv = JSON.parse(args);
         if (!Physico.globalTimerStop ||this.timerid == Physico.globalTimerException)   func(argv);
         this.timer = setTimeout("Physico.timers[" + this.timerid + "].repeat(" + func + ", '" + args + "')", 1);
-    }.bind(this)
+    }
     this.stopTimer = function () {
         this.working = 0;
         clearTimeout(this.timer);
         this.timer = null
-    }.bind(this)
+    }
 }
 
 
@@ -193,32 +166,32 @@ Physico.ObjectList = {
     objects: [],
     head: 0,
     addObjects: function(many)  {
-      for(i = 0; i < many; i++) this.addObject();  
+        for(i = 0; i < many; i++) this.addObject();  
     },
     addObject: function () {
         this.objects[this.head] = new Physico.Object(this.head);
         this.head++;
     },
     removeObject: function()	{
-	this.objects[0].terminate();
-	this.objects.splice(0, 1);
-	this.head--;
+        this.objects[0].terminate();
+        this.objects.splice(0, 1);
+        this.head--;
     },
     scrambleObjects: function(){
-	for(o in this.objects) this.objects[o].scramble();
+        for(o in this.objects) this.objects[o].scramble();
     }, 
     colors: [
-        [[0.5, 0.7, 1.0, 0.7], [0, 0.2, 0.7, 0.9]],
-        [[0.2, 0.2, 0.2, 0.7], [0, 0, 0, 0.9]],
-        [[0.7, 0.0, 0.02, 0.7], [0.2, 0.0, 0.0, 1.0]],
-        [[0.2, 0.7, 0.0, 0.7], [0.0, 0.3, 0.0, 1.0]]
+    [[0.5, 0.7, 1.0, 0.7], [0, 0.2, 0.7, 0.9]],
+    [[0.2, 0.2, 0.2, 0.7], [0, 0, 0, 0.9]],
+    [[0.7, 0.0, 0.02, 0.7], [0.2, 0.0, 0.0, 1.0]],
+    [[0.2, 0.7, 0.0, 0.7], [0.0, 0.3, 0.0, 1.0]]
     ]
 }
 
 Physico.Animator.Force = function(ix, iy, r, rx, ry, rlx, rly){
     this.isRed = r ? 1 : 0; 
     this.resolveInput = function(i)	{
-	    return typeof(i) == "number" ? i : i[0] + (Math.random() * (i[1] - i[0]));
+        return typeof(i) == "number" ? i : i[0] + (Math.random() * (i[1] - i[0]));
     }
     ix = this.resolveInput(ix);
     iy = this.resolveInput(iy);
@@ -228,70 +201,79 @@ Physico.Animator.Force = function(ix, iy, r, rx, ry, rlx, rly){
     rly = this.resolveInput(rly);
     
 
-    this.x = ix;this.ix = ix;this.rx = rx ? rx : 0;this.rsx = this.rx > 0 ? 1 : 0;this.rlx = rlx ? rlx : 0;
-    this.y = iy;this.iy = iy;this.ry = ry ? ry : 0;this.rsy = this.ry > 0 ? 1 : 0;this.rly = rly ? rly : 0;
+    this.x = ix;
+    this.ix = ix;
+    this.rx = rx ? rx : 0;
+    this.rsx = this.rx > 0 ? 1 : 0;
+    this.rlx = rlx ? rlx : 0;
+    this.y = iy;
+    this.iy = iy;
+    this.ry = ry ? ry : 0;
+    this.rsy = this.ry > 0 ? 1 : 0;
+    this.rly = rly ? rly : 0;
     this.act = function (object) {
         this.sx = this.x > 0 ? 1 : 0;
         this.sy = this.y > 0 ? 1 : 0;
         if ((this.x >= 0 && this.sx) || (this.x <= 0 && !this.sx)) {
-            object.x += this.x; 
+            object.x += this.x / 50; 
             if (this.isRed && (this.rsx && this.x > this.rlx || !this.rsx && this.x < this.rlx)) this.x -= rx;
             
         }
         if ((this.y >= 0 && this.sy) || (this.y <= 0 && !this.sy)) {
-            object.y += this.y;
+            object.y += this.y / 50;
             if (this.isRed && (this.rsy && this.y > this.rly || !this.rsy && this.y < this.rly)) this.y -= ry;
         }
         
-    }.bind(this)
+    }
 
     this.reset = function()	{
-	this.x = this.ix;
-	this.y = this.iy;
+        this.x = this.ix;
+        this.y = this.iy;
     }
-    this.reset.bind(this)
 
 }
 
 Physico.Animator.Applicator = function(object) {
     this.attObj = object;
-    this.forces = [], this.fc = 0
+    this.forces = [], 
     this.attForce = function (ix, iy, r, name, rx, ry, rlx, rly) {
-		this.forces[this.fc] = [];this.forces[this.fc]["name"] = name;
-		this.forces[this.fc]["force"] = new Physico.Animator.Force(ix, iy, r, rx, ry, rlx, rly);
-		this.fc++;
+        fc = this.forces.length
+        this.forces[fc] = [];
+        this.forces[fc]["name"] = name;
+        this.forces[fc]["force"] = new Physico.Animator.Force(ix, iy, r, rx, ry, rlx, rly);
     }
-    this.attForce.bind(this)
     this.remForce = function (name) {
-        for (i = 0; i <= this.fc; i++)
+        for (i = 0; i < this.forces.length; i++){
+            console.log(this.forces)
+            console.log(this.forces[i])
+            console.log(name)
             if (this.forces[i]["name"] == name) {
                 this.forces.splice(i, 1);
-                this.fc--;
+            }
         }
-    }.bind(this)
+    }
     this.appForces = function (args) {
-	for(force in this.forces)	{
-		this.forces[force]["force"].act(this.attObj);
-	}
-        this.attObj.move();
-    }.bind(this);
+        for(force in this.forces)	{
+            this.forces[force]["force"].act(this.attObj);
+        }
+    }
     this.resetForces = function()	{
-	for(force in this.forces) this.forces[force].force.reset(); 
-    }.bind(this)
+        for(force in this.forces) this.forces[force].force.reset(); 
+    }
     this.hasForce = function(name)	{
-	for(f in this.forces) if (this.forces[f]["name"] == name) return true;
-	return false;
+        for(f in this.forces) if (this.forces[f]["name"] == name) return true;
+        return false;
     }
     this.checkEnvForces = function()	{
-	for(force in Physico.Animator.envForcesActive) if (Physico.Animator.envForcesActive[force]) this.attForce(
-					Physico.Animator.EnvForces[force].x, 
-					Physico.Animator.EnvForces[force].y, 
-					Physico.Animator.EnvForces[force].r, 
-					force, 
-					Physico.Animator.EnvForces[force].rx, 
-					Physico.Animator.EnvForces[force].ry, 
-					Physico.Animator.EnvForces[force].rlx, 
-					Physico.Animator.EnvForces[force].rly);
+        for(force in Physico.Animator.envForcesActive) if (Physico.Animator.envForcesActive[force]) this.attForce(
+            Physico.Animator.EnvForces[force].x, 
+            Physico.Animator.EnvForces[force].y, 
+            Physico.Animator.EnvForces[force].r, 
+            force, 
+            Physico.Animator.EnvForces[force].rx, 
+            Physico.Animator.EnvForces[force].ry, 
+            Physico.Animator.EnvForces[force].rlx, 
+            Physico.Animator.EnvForces[force].rly);
     }
 }
 
@@ -303,7 +285,7 @@ Physico.Animator.EnvForces = {
         "rx": 0,
         "ry": 0.1,
         "rly": -9.8, 
-	"rlx": 0
+        "rlx": 0
     },
     "wind": {
         "x": 0,
@@ -311,7 +293,7 @@ Physico.Animator.EnvForces = {
         "r": 1,
         "rx": [-0.1, -0.5],
         "ry": 0,
-        "rlx": [3, 10],
+        "rlx": [3, 15],
         "rly": 0
     },
     "repulse" : {
@@ -321,7 +303,7 @@ Physico.Animator.EnvForces = {
         "rx": 0,
         "ry": -0.1,
         "rly": 9.8, 
-	"rlx": 0        
+        "rlx": 0        
     },
     "inverse-wind": {
         "x": 0,
@@ -336,23 +318,23 @@ Physico.Animator.EnvForces = {
 
 Physico.Animator.envForcesActive = [];
 Physico.Animator.ToggleEnvForce = function (force) {
-	if (Physico.Animator.envForcesActive[force])	{
-		Physico.Animator.envForcesActive[force] = 0;
-		for(obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.remForce(force);
-	}	else {
-		Physico.Animator.envForcesActive[force] = 1;
-		for (obj in Physico.ObjectList.objects) 
-			if (!Physico.ObjectList.objects[obj].applicator.hasForce(force))
-			Physico.ObjectList.objects[obj].applicator.attForce(
-					Physico.Animator.EnvForces[force].x, 
-					Physico.Animator.EnvForces[force].y, 
-					Physico.Animator.EnvForces[force].r, 
-					force, 
-					Physico.Animator.EnvForces[force].rx, 
-					Physico.Animator.EnvForces[force].ry, 
-					Physico.Animator.EnvForces[force].rlx, 
-					Physico.Animator.EnvForces[force].rly);
-	}
+    if (Physico.Animator.envForcesActive[force])	{
+        Physico.Animator.envForcesActive[force] = 0;
+        for(obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.remForce(force);
+    }	else {
+        Physico.Animator.envForcesActive[force] = 1;
+        for (obj in Physico.ObjectList.objects) 
+            if (!Physico.ObjectList.objects[obj].applicator.hasForce(force))
+                Physico.ObjectList.objects[obj].applicator.attForce(
+                    Physico.Animator.EnvForces[force].x, 
+                    Physico.Animator.EnvForces[force].y, 
+                    Physico.Animator.EnvForces[force].r, 
+                    force, 
+                    Physico.Animator.EnvForces[force].rx, 
+                    Physico.Animator.EnvForces[force].ry, 
+                    Physico.Animator.EnvForces[force].rlx, 
+                    Physico.Animator.EnvForces[force].rly);
+    }
 }
 
 Physico.Object = function(number) {
@@ -361,17 +343,19 @@ Physico.Object = function(number) {
     this.color = Math.round(Math.random() * (Physico.ObjectList.colors.length - 1));
     
     this.scramble = function()	{
-	this.x = Math.round(70 + Math.random() * (window.innerWidth - 100));
-	this.y = Math.round(70 + Math.random() * (window.innerHeight - 100));
+        q = Math.round(Math.random() * 4); 
+        this.x = Math.round(Math.random() * 25);
+        if(q == 2 || q == 3) this.x = -this.x;
+        this.y = Math.round(Math.random() * 25);
+        if(q == 3 || q == 4) this.y = -this.y;
         this.z = Math.random() * 10
-    }.bind(this)
+    }
 
     this.scramble(); 
-    this.ix = this.x;this.rx = this.x - window.innerHeight / 2 
-    this.iy = this.y;this.ry = this.y - window.innerHeight / 2 
+    this.ix = this.x;
+    this.iy = this.y;
 	
     this.attachedTimer = null;
-    this.move = function(x, y) {this.rx = x - window.innerHeight / 2;this.ry = y - window.innerHeight / 2}
     
     this.applicator = new Physico.Animator.Applicator(this);
     this.applicator.checkEnvForces();
@@ -381,18 +365,17 @@ Physico.Object = function(number) {
     }
 };
 
-Physico.GL = function() {   
-    canvas = Physico.canvas;
-    gl = null;shaderProgram = null;pBuffer = cBuffer = pbBuffer = cbBuffer = null;
-    pMatrix = mat4.create();mvMatrix = mat4.create();
-    
-    this.l = {
-        colors: [],
-        offsets: [],
-        head: 0
-    }
-    
-    this.getShader = function(gl, id) {
+Physico.GL = {                        
+    canvas: Physico.canvas,
+    gl: null,
+    shaderProgram: null,
+    pBuffer: null,
+    cBuffer: null,
+    pbBuffer: null,
+    cbBuffer: null,
+    pMatrix: mat4.create(),
+    mvMatrix: mat4.create(),       
+    getShader: function(gl, id) {
         var shaderScript = document.getElementById(id);
         if (!shaderScript) {
             return null;
@@ -401,6 +384,7 @@ Physico.GL = function() {
         var str = "";
         var k = shaderScript.firstChild;
         while (k) {
+            console.log(k);
             if (k.nodeType == 3) {
                 str += k.textContent;
             }
@@ -420,160 +404,223 @@ Physico.GL = function() {
         gl.compileShader(shader);
 
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(shader));
+            alert(this.gl.getShaderInfoLog(shader));
             return null;
         }
 
         return shader;
-    }
-    this.setMatrixUniforms = function() {
-        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-    }
-
-    
-    this.initGL = function(){        
+    },
+    setMatrixUniforms: function() {
+        this.gl.uniformMatrix4fv(this.shaderProgram.pMatrixUniform, false, this.pMatrix);
+        this.gl.uniformMatrix4fv(this.shaderProgram.mvMatrixUniform, false, this.mvMatrix);
+    },    
+    initGL: function(){        
         try {
-            gl = canvas.getContext("experimental-webgl");
+            this.canvas = Physico.canvas
+            this.gl = this.canvas.getContext("experimental-webgl");
             this.updateViewport();
         } catch (e) {
         }
-        if (!gl) {
+        if (!this.gl) {
             alert("Could not initialise WebGL, sorry :-(");
         }
-    }    
-    this.updateViewport = function()    {
-        canvas.width = window.innerWidth;canvas.height = window.innerHeight;
-        gl.viewportWidth = canvas.width;
-        gl.viewportHeight = canvas.height;        
-    }
-    this.initShaders = function(){        
-        var fragmentShader = this.getShader(gl, "shader-fs");
-        var vertexShader = this.getShader(gl, "shader-vs");
+    } ,  
+    updateViewport: function()    {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.gl.viewportWidth = this.canvas.width;
+        this.gl.viewportHeight = this.canvas.height;        
+    },
+    initShaders: function(){        
+        var fragmentShader = this.getShader(this.gl, "fragment");
+        var vertexShader = this.getShader(this.gl, "vertex");
+        this.shaderProgram = this.gl.createProgram();
+        this.gl.attachShader(this.shaderProgram, vertexShader);
+        this.gl.attachShader(this.shaderProgram, fragmentShader);
+        this.gl.linkProgram(this.shaderProgram);
 
-        shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
-
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
             alert("Could not initialise shaders");
         }
 
-        gl.useProgram(shaderProgram);
+        this.gl.useProgram(this.shaderProgram);
 
-        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "vertexPosition");
-        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "vertexColor");
-        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+        this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexPosition");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
+        this.shaderProgram.vertexColorAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexColor");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexColorAttribute);
 
-        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-    }
-    this.initBuffer = function(){
-        pBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
-        var angle; var vertices = [0, 0, 0]
+        this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
+        this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
+    },
+    initBuffer: function(){
+        this.pBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
+        var angle;
+        var vertices = [0, 0, 0]
         for(i = 0; i <= 100; i++)   {
             angle = Math.PI * 2 * (i / 100);
             vertices.push(Math.cos(angle), Math.sin(angle), 0);
         }
-        pBuffer.numItems = 102
+        this.pBuffer.numItems = 102
         vertices = new Float32Array(vertices);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-        pBuffer.itemSize = 3
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
+        this.pBuffer.itemSize = 3
         
        
         
         var vertices = [];
         for (j = 0; j < Physico.ObjectList.colors.length; j++)  {
             vertices[j] = [];
-                vertices[j].push(Physico.ObjectList.colors[j][0][0], Physico.ObjectList.colors[j][0][1], Physico.ObjectList.colors[j][0][2], Physico.ObjectList.colors[j][0][3])
+            vertices[j].push(Physico.ObjectList.colors[j][0][0], Physico.ObjectList.colors[j][0][1], Physico.ObjectList.colors[j][0][2], Physico.ObjectList.colors[j][0][3])
             for(i = 0; i <= 100; i++)   {
-                    vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
+                vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
             }
         }
-        cBuffer = []; console.log(vertices)
+        this.cBuffer = [];
         for(j = 0; j < Physico.ObjectList.colors.length; j++)   {
-            cBuffer[j] = gl.createBuffer();
+            this.cBuffer[j] = this.gl.createBuffer();
             v = new Float32Array(vertices[j]);
             
-            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer[j]);
-            gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);      
-            cBuffer[j].numItems = 102;
-            cBuffer[j].itemSize = 4;      
-            console.log(cBuffer[j])
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[j]);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);      
+            this.cBuffer[j].numItems = 102;
+            this.cBuffer[j].itemSize = 4;      
+            console.log(this.cBuffer[j])
         }
-//        vertices = [0.5, 0.8, 1.0, 1.0]
-//        for(i = 0; i <= 100; i++)
-//            vertices.push(0.0, 0.2, 0.7, 0.7)
-//        vertices = new Float32Array(vertices);
-//        cBuffer = gl.createBuffer();
-//        gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-//        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
-//        cBuffer.itemSize = 4;
-//        cBuffer.numItems = 101;
-//        console.log(cBuffer)
         
-        pbBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, pbBuffer);
-        var angle, sin, cos; vertices = [];
+        this.pbBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
+        var angle, sin, cos;
+        vertices = [];
         for(i = 0; i <= 100; i++)   {
-            angle = Math.PI * 2 * (i / 100); sin = Math.sin(angle); cos = Math.cos(angle);
+            angle = Math.PI * 2 * (i / 100);
+            sin = Math.sin(angle);
+            cos = Math.cos(angle);
             vertices.push(cos, sin, 0);
             vertices.push(cos + 0.025, sin + 0.025, 0);
         }
-        pbBuffer.numItems = 202;
+        this.pbBuffer.numItems = 202;
         vertices = new Float32Array(vertices);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-        pbBuffer.itemSize = 3
-        cbBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, cbBuffer);
-        var angle; vertices = []
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
+        this.pbBuffer.itemSize = 3
+        this.cbBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
+        var angle;
+        vertices = []
         for(i = 0; i <= 100; i++)   {
             vertices.push(0.0, 0.0, 0.0, 1.0);
             vertices.push(0.0, 0.0, 0.0, 0.7);
         }
-        cbBuffer.numItems = 202;
+        this.cbBuffer.numItems = 202;
         vertices = new Float32Array(vertices);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-        cbBuffer.itemSize = 4;
-    }
-    this.drawScene = function() {
-        gl.viewport(0, 0, window.innerWidth, window.innerHeight);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LESS);    
-        mat4.perspective(45, window.innerWidth / window.innerHeight, 0.1, 1000.0, pMatrix);        
-        mat4.identity(mvMatrix);
-        mat4.translate(mvMatrix, Physico.scene)
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
+        this.cbBuffer.itemSize = 4;
+    },
+    drawScene: function() {
+        this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.depthFunc(this.gl.LESS);    
+        mat4.perspective(45, window.innerWidth / window.innerHeight, 0.1, 1000.0, this.pMatrix);        
+        mat4.identity(this.mvMatrix);
+        mat4.translate(this.mvMatrix, Physico.scene)
         for (obj in Physico.ObjectList.objects) {
+            if(obj) pobj = Physico.ObjectList.objects[obj - 1]
             obj = Physico.ObjectList.objects[obj];
-//            mat4.translate(mvMatrix, [0, 0, 0]);
-            mat4.translate(mvMatrix, [(obj.x - window.innerWidth / 2) / 25, (obj.y - window.innerHeight / 2) / 150, -obj.z]);
-            gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, pBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer[obj.color]);
-            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cBuffer[obj.color].itemSize, gl.FLOAT, false, 0, 0);
+            mat4.translate(this.mvMatrix, [obj.x, obj.y, -obj.z]);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[obj.color]);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[obj.color].itemSize, this.gl.FLOAT, false, 0, 0);
             this.setMatrixUniforms();
-            gl.drawArrays(gl.TRIANGLE_FAN, 0, pBuffer.numItems);
+            this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.pBuffer.numItems);
             
-            gl.bindBuffer(gl.ARRAY_BUFFER, pbBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, pbBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            gl.bindBuffer(gl.ARRAY_BUFFER, cbBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cbBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.setMatrixUniforms();
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, pbBuffer.numItems);
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.pbBuffer.numItems);
             
             
-            mat4.translate(mvMatrix, [(obj.x - window.innerWidth / 2) / 25 * -1, (obj.y - window.innerHeight / 2) / 150 * -1, obj.z]);
+            mat4.translate(this.mvMatrix, [-obj.x, -obj.y, obj.z]);
         }        
+    },
+    init: function()    {
+        this.initGL();
+        this.initShaders();
+        this.initBuffer();
+    }    
+}
+Physico.shaderLoader = {
+    loadFile: function(url, no, callback, errorCallback) {	    
+        var request = new XMLHttpRequest();
+        request.open('GET', url, true);
+        request.onreadystatechange = function () {
+            // If the request is "DONE" (completed or failed)
+            if (request.readyState == 4) {
+                // If we got HTTP status 200 (OK)
+                if (request.status == 200) {
+                    callback(request.responseText, no)
+                } else { // Failed
+                    errorCallback(url);
+                }
+            }
+        };
+        request.send(null);    
+    },
+	
+    loadFiles: function(urls, callback, errorCallback, GCB) {
+        var numUrls = urls.length;
+        var numComplete = 0;
+        var result = [];
+	    
+	
+        // Callback for a single file
+        function partialCallback(text, urlIndex) {
+            result[result.length] = {}
+            result[result.length-1].type = urls[urlIndex][1];
+            result[result.length-1].text = text;
+            result[result.length-1].url = urls[urlIndex][0];
+	        
+            numComplete++;
+            // When all files have downloaded
+            if (numComplete == numUrls) {
+                callback(result, GCB);
+            }
+        }
+	
+        for (i = 0; i < numUrls; i++) {
+            Physico.shaderLoader.loadFile(urls[i][0], i, partialCallback, errorCallback);
+        }
+    },
+    appendShaders: function(shaders, callback)	{
+        for(shader in shaders)	{
+            shader = shaders[shader]
+            elem = document.createElement('script')
+            url = shader.url;
+            elem.id = url.substr(url.lastIndexOf("/") + 1)
+            elem.innerHTML = shader.text;
+            elem.type = shader.type
+            document.head.appendChild(elem);
+        }
+        callback()
+    },
+    completeLoad: function()	{
+        Physico.createElements();
+        Physico.GL.init();
+        Physico.ObjectList.addObject();
+        Physico.Animator.AnimationTimer = new Physico.Timer();
+        Physico.Animator.AnimationTimer.animate = function () {
+            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
+            Physico.GL.drawScene();
+        }
+        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
     }
-        
-    this.initGL();this.initShaders();this.initBuffer();      
-    
+
 }
 
 window.onresize = function()    {
-    Physico.gl.updateViewport();
+    Physico.GL.updateViewport();
 }

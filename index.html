@@ -9,31 +9,6 @@
     <link media="all" rel="stylesheet" href="/fonts/quicksand/stylesheet.css" type="text/css" />
     <script type="text/javascript" src='/js/glMatrix-0.9.5.min.js'></script>   
     <script src="/js/default.js" type='text/javascript'></script>
-    <script id="shader-fs" type="x-shader/x-fragment">
-        #ifdef GL_ES
-        precision highp float;
-        #endif
-
-        varying vec4 vColor;
-        
-        void main(void) {
-            gl_FragColor = vColor;
-        }
-    </script>
-    <script id="shader-vs" type="x-shader/x-vertex" src='/webgl/vertex'>
-        attribute vec3 vertexPosition;
-        attribute vec4 vertexColor;
-
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
-        
-        varying vec4 vColor;
-
-        void main(void) {
-            gl_Position = uPMatrix * uMVMatrix * vec4(vertexPosition, 1.0);
-            vColor = vertexColor;
-        }
-    </script>
 </head>
 <body onload='Physico.init()'>
 
