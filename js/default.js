@@ -2,7 +2,14 @@
     canvas: null,
     menu: null,
     init: function () {
-        Physico.loadShaders();
+		s = document.createElement("script")
+		s.src = "/js/libs/cl/cl/CLFramework.js"
+		s.onload = function()	{
+			CL.Framework.modulesDir = "/js/libs/cl/cl/"
+			CL.Framework.init(Physico.loadShaders);
+			document.head.removeChild(this)
+		}
+		document.head.appendChild(s)
         return this;
     },
     globalFreeze: function(timer)    {
@@ -102,15 +109,26 @@
         }
     },
     loadShaders: function()	{
-        Physico.shaderLoader.loadFiles(
+        CL.ShaderLoader.loadFiles(
             Physico.webglshaders, 
-            Physico.shaderLoader.appendShaders, 
+            CL.ShaderLoader.appendShaders, 
             function(url) {
                 alert("Couldn't load " + url + " component ... shutting down.")
             },
-            Physico.shaderLoader.completeLoad
+            Physico.completeLoad
             );
     },
+	completeLoad: function()	{	
+	        Physico.createElements();
+	        Physico.GL.init();
+	        Physico.ObjectList.addObject();
+	        Physico.Animator.AnimationTimer = new Physico.Timer();
+	        Physico.Animator.AnimationTimer.animate = function () {
+	            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
+	            Physico.GL.drawScene();
+	        }
+	        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
+	},
     timers: [],
     timerc: 0,
     globalTimerStop: 0,
@@ -244,10 +262,7 @@ Physico.Animator.Applicator = function(object) {
     }
     this.remForce = function (name) {
         for (i = 0; i < this.forces.length; i++){
-            console.log(this.forces)
-            console.log(this.forces[i])
-            console.log(name)
-            if (this.forces[i]["name"] == name) {
+	           if (this.forces[i]["name"] == name) {
                 this.forces.splice(i, 1);
             }
         }
@@ -384,7 +399,6 @@ Physico.GL = {
         var str = "";
         var k = shaderScript.firstChild;
         while (k) {
-            console.log(k);
             if (k.nodeType == 3) {
                 str += k.textContent;
             }
@@ -486,7 +500,6 @@ Physico.GL = {
             this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);      
             this.cBuffer[j].numItems = 102;
             this.cBuffer[j].itemSize = 4;      
-            console.log(this.cBuffer[j])
         }
         
         this.pbBuffer = this.gl.createBuffer();
@@ -553,73 +566,7 @@ Physico.GL = {
         this.initBuffer();
     }    
 }
-Physico.shaderLoader = {
-    loadFile: function(url, no, callback, errorCallback) {	    
-        var request = new XMLHttpRequest();
-        request.open('GET', url, true);
-        request.onreadystatechange = function () {
-            // If the request is "DONE" (completed or failed)
-            if (request.readyState == 4) {
-                // If we got HTTP status 200 (OK)
-                if (request.status == 200) {
-                    callback(request.responseText, no)
-                } else { // Failed
-                    errorCallback(url);
-                }
-            }
-        };
-        request.send(null);    
-    },
-	
-    loadFiles: function(urls, callback, errorCallback, GCB) {
-        var numUrls = urls.length;
-        var numComplete = 0;
-        var result = [];
-	    
-	
-        // Callback for a single file
-        function partialCallback(text, urlIndex) {
-            result[result.length] = {}
-            result[result.length-1].type = urls[urlIndex][1];
-            result[result.length-1].text = text;
-            result[result.length-1].url = urls[urlIndex][0];
-	        
-            numComplete++;
-            // When all files have downloaded
-            if (numComplete == numUrls) {
-                callback(result, GCB);
-            }
-        }
-	
-        for (i = 0; i < numUrls; i++) {
-            Physico.shaderLoader.loadFile(urls[i][0], i, partialCallback, errorCallback);
-        }
-    },
-    appendShaders: function(shaders, callback)	{
-        for(shader in shaders)	{
-            shader = shaders[shader]
-            elem = document.createElement('script')
-            url = shader.url;
-            elem.id = url.substr(url.lastIndexOf("/") + 1)
-            elem.innerHTML = shader.text;
-            elem.type = shader.type
-            document.head.appendChild(elem);
-        }
-        callback()
-    },
-    completeLoad: function()	{
-        Physico.createElements();
-        Physico.GL.init();
-        Physico.ObjectList.addObject();
-        Physico.Animator.AnimationTimer = new Physico.Timer();
-        Physico.Animator.AnimationTimer.animate = function () {
-            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
-            Physico.GL.drawScene();
-        }
-        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
-    }
 
-}
 
 window.onresize = function()    {
     Physico.GL.updateViewport();
