@@ -6,7 +6,12 @@
 		s.src = "/js/libs/cl/cl/CLFramework.js"
 		s.onload = function()	{
 			CL.Framework.modulesDir = "/js/libs/cl/cl/"
-			CL.Framework.init(Physico.loadShaders);
+			CL.Framework.init(function() {
+				CL.DynamicFileLoader.addLib("screen", "/css/screen.css")
+				CL.DynamicFileLoader.addLib("glMatrix", "/js/glMatrix-0.9.5.min.js")
+				CL.DynamicFileLoader.addLib("gui", "/js/gui.js")
+				CL.DynamicFileLoader.processQueue(function(){GUI.init(Physico.loadShaders)})
+			});
 			document.head.removeChild(this)
 		}
 		document.head.appendChild(s)
@@ -69,33 +74,10 @@
                 Physico.sceneZoom = 1;
             }
         }
-        document.onkeydown = function(e) {
-            switch(e.keyCode)   {
-                case 33:
-                    Physico.scene[2] -= 1;
-                    break;
-                case 34:
-                    Physico.scene[2] += 1;
-                    break;
-                case 37:
-                    Physico.scene[0] -= 1;
-                    break;
-                case 38:
-                    Physico.scene[1] += 1;
-                    break;
-                case 39:
-                    Physico.scene[0] += 1;
-                    break;
-                case 40:
-                    Physico.scene[1] -= 1;
-                    break;
-                case 46:
-                    Physico.scene = [0, 0, -15]
-                    break;
-            }
-        }
+        
         var mousewheelevt=(/Firefox/i.test(navigator.userAgent))? "DOMMouseScroll" : "mousewheel" 
         document.addEventListener(mousewheelevt, function(e){
+	        if(GUI.active) return
             Physico.scene[2] -= (e.wheelDeltaY ? e.wheelDeltaY / 250 : -e.detail / 3);
             e.preventDefault();
         }, false)
@@ -195,6 +177,9 @@ Physico.ObjectList = {
         this.objects.splice(0, 1);
         this.head--;
     },
+	removeObjects: function(many)   {
+        for(i = 0; i < many; i++) this.removeObject();
+	},
     scrambleObjects: function(){
         for(o in this.objects) this.objects[o].scramble();
     }, 
@@ -380,7 +365,7 @@ Physico.Object = function(number) {
     }
 };
 
-Physico.GL = {                        
+Physico.GL = {
     canvas: Physico.canvas,
     gl: null,
     shaderProgram: null,
@@ -388,8 +373,10 @@ Physico.GL = {
     cBuffer: null,
     pbBuffer: null,
     cbBuffer: null,
-    pMatrix: mat4.create(),
-    mvMatrix: mat4.create(),       
+    pMatrix: null,
+    mvMatrix: null,
+	lb: null,
+	lbc: null,
     getShader: function(gl, id) {
         var shaderScript = document.getElementById(id);
         if (!shaderScript) {
@@ -427,10 +414,12 @@ Physico.GL = {
     setMatrixUniforms: function() {
         this.gl.uniformMatrix4fv(this.shaderProgram.pMatrixUniform, false, this.pMatrix);
         this.gl.uniformMatrix4fv(this.shaderProgram.mvMatrixUniform, false, this.mvMatrix);
-    },    
-    initGL: function(){        
+    },
+    initGL: function(){
         try {
             this.canvas = Physico.canvas
+	        this.pMatrix = mat4.create()
+	        this.mvMatrix = mat4.create()
             this.gl = this.canvas.getContext("experimental-webgl");
             this.updateViewport();
         } catch (e) {
@@ -438,14 +427,14 @@ Physico.GL = {
         if (!this.gl) {
             alert("Could not initialise WebGL, sorry :-(");
         }
-    } ,  
+    } ,
     updateViewport: function()    {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         this.gl.viewportWidth = this.canvas.width;
-        this.gl.viewportHeight = this.canvas.height;        
+        this.gl.viewportHeight = this.canvas.height;
     },
-    initShaders: function(){        
+    initShaders: function(){
         var fragmentShader = this.getShader(this.gl, "fragment");
         var vertexShader = this.getShader(this.gl, "vertex");
         this.shaderProgram = this.gl.createProgram();
@@ -480,9 +469,9 @@ Physico.GL = {
         vertices = new Float32Array(vertices);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
         this.pBuffer.itemSize = 3
-        
-       
-        
+
+
+
         var vertices = [];
         for (j = 0; j < Physico.ObjectList.colors.length; j++)  {
             vertices[j] = [];
@@ -495,13 +484,13 @@ Physico.GL = {
         for(j = 0; j < Physico.ObjectList.colors.length; j++)   {
             this.cBuffer[j] = this.gl.createBuffer();
             v = new Float32Array(vertices[j]);
-            
+
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[j]);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);      
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);
             this.cBuffer[j].numItems = 102;
-            this.cBuffer[j].itemSize = 4;      
+            this.cBuffer[j].itemSize = 4;
         }
-        
+
         this.pbBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
         var angle, sin, cos;
@@ -529,15 +518,37 @@ Physico.GL = {
         vertices = new Float32Array(vertices);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
         this.cbBuffer.itemSize = 4;
+
+	    this.lb = this.gl.createBuffer();
+	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lb) 
+	    vertices = new Float32Array([-9999,0, 0, 9999, 0, 0, 0, -9999, 0, 0, 9999, 0])
+	    this.lb.itemSize = 3;
+	    this.lb.numItems = 4;
+	    this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW)
+
+	    this.lbc = this.gl.createBuffer();
+	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lbc)
+	    vertices = new Float32Array([0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1])
+	    this.lbc.itemSize = 4;
+	    this.lbc.numItems = 4;
+	    this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW)
     },
     drawScene: function() {
         this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
         this.gl.enable(this.gl.DEPTH_TEST);
-        this.gl.depthFunc(this.gl.LESS);    
-        mat4.perspective(45, window.innerWidth / window.innerHeight, 0.1, 1000.0, this.pMatrix);        
+        this.gl.depthFunc(this.gl.LESS);
+        mat4.perspective(45, window.innerWidth / window.innerHeight, 0.1, 1000.0, this.pMatrix);
         mat4.identity(this.mvMatrix);
         mat4.translate(this.mvMatrix, Physico.scene)
+	    
+	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lb);
+		this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.lb.itemSize, this.gl.FLOAT, false, 0, 0);
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lbc);
+		this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.lbc.itemSIze, this.gl.FLOAT, false, 0, 0);
+		this.setMatrixUniforms();
+		this.gl.drawArrays(this.gl.LINES, 0, this.lb.numItems);
+
         for (obj in Physico.ObjectList.objects) {
             if(obj) pobj = Physico.ObjectList.objects[obj - 1]
             obj = Physico.ObjectList.objects[obj];
@@ -548,23 +559,23 @@ Physico.GL = {
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[obj.color].itemSize, this.gl.FLOAT, false, 0, 0);
             this.setMatrixUniforms();
             this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.pBuffer.numItems);
-            
+
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.setMatrixUniforms();
             this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.pbBuffer.numItems);
-            
-            
+
+
             mat4.translate(this.mvMatrix, [-obj.x, -obj.y, obj.z]);
-        }        
+        }
     },
     init: function()    {
         this.initGL();
         this.initShaders();
         this.initBuffer();
-    }    
+    }
 }
 
 

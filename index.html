@@ -3,54 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <title>Physico_Implementation</title>
-    <!-- Physico_Implementation references -->
-    <link rel="stylesheet" href="/css/default.css" />
-    <link media="all" rel="stylesheet" href="/fonts/raleway/stylesheet.css" type="text/css" />
-    <link media="all" rel="stylesheet" href="/fonts/quicksand/stylesheet.css" type="text/css" />
-    <script type="text/javascript" src='/js/glMatrix-0.9.5.min.js'></script>   
-    <script src="/js/default.js" type='text/javascript'></script>
+    <script src="/js/engine.js" type='text/javascript'></script>
 </head>
 <body onload='Physico.init()'>
 
-    <div id="objects" class='settings'>
-    <div class="settings-menu">
-        <button onclick="Physico.ObjectList.addObject()" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">New Object</span>
-        </button>
-        <button onclick="Physico.ObjectList.addObjects(100)" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">New 100 Objects</span>
-        </button>
-        <button onclick="Physico.ObjectList.addObjects(1000)" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">New 1000 Objects</span>
-        </button>
-        <button onclick="Physico.ObjectList.removeObject()" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">Delete Object</span>
-        </button>
-        <button onclick="Physico.Animator.ToggleEnvForce('gravity')" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">Toggle Gravity</span>
-        </button>
-        <button onclick="Physico.Animator.ToggleEnvForce('repulse')" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">Toggle Repulse</span>
-        </button>
-        <button onclick="Physico.Animator.ToggleEnvForce('wind')" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">Toggle Wind</span>
-        </button>
-        <button onclick="Physico.Animator.ToggleEnvForce('inverse-wind')" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-            <span class="win-label">Toggle Inverse Wind</span>
-        </button>
-        <button onclick="Physico.ObjectList.scrambleObjects()" >
-            <span style="background-image:url('weekview_sprite.png')" class="win-spritestates win-commandicon win-large"></span>
-	    <span class="win-label">Scramble Objects</span>
-        </button>
-    </div>
-</div>
 </body>
 </html>
