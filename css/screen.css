@@ -5,6 +5,8 @@ body{
 }
 body *{
 
+	-o-transition: all 0.5s ease-in-out;
+	-webkit-transition: all 0.5s ease-in-out;
 	-moz-transition: all 0.5s ease-in-out
 }
 .itooltip, .icredits{
@@ -42,6 +44,7 @@ header, footer{
 	z-index: 9;
 	margin:  0; 
 	color: white;
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0, #222), color-stop(0.33, #292929), color-stop(0.66, #222), color-stop(1, #191919)); 
 	background:  -moz-linear-gradient(-90deg, #222, #292929, #222, #191919);
 	box-shadow: 0 0 10px black;
 	font-size: 15pt;
@@ -71,6 +74,7 @@ footer{
 	padding:  3px 3px 3px 7px;
 	font-size: 10pt;
 	background:  -moz-linear-gradient(-90deg, #191919, #222222);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0, #191919), color-stop(1, #222));
 }
 footer.active{
 	height: 15px;
@@ -142,6 +146,7 @@ footer p{
 	border-top-color: rgba(0, 0, 0, 0.2);
 	border-left-color: rgba(0, 0, 0, 0.2);
 	-moz-transition: all 0.25s ease-in;
+	-webkit-transition: all 0.25s ease-in;
 	font-size: 10pt;
 	margin:  0;
 	padding:  0;

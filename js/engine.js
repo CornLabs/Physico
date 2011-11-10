@@ -3,9 +3,9 @@
     menu: null,
     init: function () {
 		s = document.createElement("script")
-		s.src = "/js/libs/cl/cl/CLFramework.js"
+		s.src = "/js/libs/cl/CL/CLFramework.js"
 		s.onload = function()	{
-			CL.Framework.modulesDir = "/js/libs/cl/cl/"
+			CL.Framework.modulesDir = "/js/libs/cl/CL/"
 			CL.Framework.init(function() {
 				CL.DynamicFileLoader.addLib("screen", "/css/screen.css")
 				CL.DynamicFileLoader.addLib("glMatrix", "/js/glMatrix-0.9.5.min.js")
