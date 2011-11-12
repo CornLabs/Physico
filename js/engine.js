@@ -3,9 +3,9 @@
     menu: null,
     init: function () {
 		s = document.createElement("script")
-		s.src = "/js/libs/cl/CL/CLFramework.js"
+		s.src = "/js/libs/cl/CLFramework.js"
 		s.onload = function()	{
-			CL.Framework.modulesDir = "/js/libs/cl/CL/"
+			CL.Framework.modulesDir = "/js/libs/cl/"
 			CL.Framework.init(function() {
 				CL.DynamicFileLoader.addLib("screen", "/css/screen.css")
 				CL.DynamicFileLoader.addLib("glMatrix", "/js/glMatrix-0.9.5.min.js")
@@ -54,8 +54,16 @@
         this.canvas.onmousemove = function(e)    {
             if (Physico.sceneDrag == null) return;
             m = Physico.getMouseCoords(e);
-            Physico.scene[0] += (m.x - Physico.sceneDrag.x) / 250;
-            Physico.scene[1] -= (m.y - Physico.sceneDrag.y) / 250;
+            if (Physico.rotationChange)  {
+                x = m.x - Physico.sceneDrag.x
+                y = m.y - Physico.sceneDrag.y
+                Physico.rotate[1] += x / 5000;
+                Physico.rotate[0] += y / 5000;
+            } else {
+                Physico.scene[0] += (m.x - Physico.sceneDrag.x) / 250;
+                Physico.scene[1] -= (m.y - Physico.sceneDrag.y) / 250;
+            }
+            e.preventDefault();
         }
         this.canvas.onmousedown = function(e)   {
             Physico.sceneDrag = Physico.getMouseCoords(e);            
@@ -116,6 +124,7 @@
     globalTimerStop: 0,
     globalTimerException: -1,
     scene: [0, 0, -15],
+    rotate: [0, 0, 0],
     sceneDrag: null,
     sceneZoom: 1,
     webglshaders: [['/webgl/fragment', 'x-shader/x-fragment'], ['/webgl/vertex', 'x-shader/x-vertex']]
@@ -184,10 +193,10 @@ Physico.ObjectList = {
         for(o in this.objects) this.objects[o].scramble();
     }, 
     colors: [
-    [[0.5, 0.7, 1.0, 0.7], [0, 0.2, 0.7, 0.9]],
-    [[0.2, 0.2, 0.2, 0.7], [0, 0, 0, 0.9]],
-    [[0.7, 0.0, 0.02, 0.7], [0.2, 0.0, 0.0, 1.0]],
-    [[0.2, 0.7, 0.0, 0.7], [0.0, 0.3, 0.0, 1.0]]
+    [[0.5, 1.0, 1.0, 1.0], [0, 0.2, 1.0, 1.0]],
+    [[0.2, 0.2, 0.2, 1.0], [0, 0, 0, 1.0]],
+    [[1.0, 0.0, 0.02, 1.0], [0.2, 0.0, 0.0, 1.0]],
+    [[0.2, 1.0, 0.0, 1.0], [0.0, 0.3, 0.0, 1.0]]
     ]
 }
 
@@ -348,7 +357,7 @@ Physico.Object = function(number) {
         if(q == 2 || q == 3) this.x = -this.x;
         this.y = Math.round(Math.random() * 25);
         if(q == 3 || q == 4) this.y = -this.y;
-        this.z = Math.random() * 10
+        this.z = Math.random() * 50
     }
 
     this.scramble(); 
@@ -418,10 +427,12 @@ Physico.GL = {
     initGL: function(){
         try {
             this.canvas = Physico.canvas
-	        this.pMatrix = mat4.create()
-	        this.mvMatrix = mat4.create()
+		this.pMatrix = mat4.create()
+		this.mvMatrix = mat4.create()
             this.gl = this.canvas.getContext("experimental-webgl");
-            this.updateViewport();
+	        this.updateViewport();
+            this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE)
+            this.gl.depthFunc(this.gl.LESS);
         } catch (e) {
         }
         if (!this.gl) {
@@ -512,7 +523,7 @@ Physico.GL = {
         vertices = []
         for(i = 0; i <= 100; i++)   {
             vertices.push(0.0, 0.0, 0.0, 1.0);
-            vertices.push(0.0, 0.0, 0.0, 0.7);
+            vertices.push(0.0, 0.0, 0.0, 0.0);
         }
         this.cbBuffer.numItems = 202;
         vertices = new Float32Array(vertices);
@@ -521,14 +532,21 @@ Physico.GL = {
 
 	    this.lb = this.gl.createBuffer();
 	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lb) 
-	    vertices = new Float32Array([-9999,0, 0, 9999, 0, 0, 0, -9999, 0, 0, 9999, 0])
+	    vertices = new Float32Array([
+		-9999, -9999, 0,
+		-9999, 9999, 0,
+		9999, -9999, 0,
+		9999, 9999, 0,
+	    ])
 	    this.lb.itemSize = 3;
 	    this.lb.numItems = 4;
 	    this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW)
 
 	    this.lbc = this.gl.createBuffer();
 	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lbc)
-	    vertices = new Float32Array([0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1])
+	    vertices = [];
+	    for(i = 1; i <= 4; i++)	vertices.push(1, 1, 1, 0.1)
+	    vertices = new Float32Array(vertices)
 	    this.lbc.itemSize = 4;
 	    this.lbc.numItems = 4;
 	    this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW)
@@ -536,29 +554,46 @@ Physico.GL = {
     drawScene: function() {
         this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-        this.gl.enable(this.gl.DEPTH_TEST);
-        this.gl.depthFunc(this.gl.LESS);
         mat4.perspective(45, window.innerWidth / window.innerHeight, 0.1, 1000.0, this.pMatrix);
         mat4.identity(this.mvMatrix);
         mat4.translate(this.mvMatrix, Physico.scene)
-	    
+        mat4.rotate(this.mvMatrix, Physico.rotate[0], [1, 0, 0]);
+        mat4.rotate(this.mvMatrix, Physico.rotate[1], [0, 1, 0]);
+        mat4.rotate(this.mvMatrix, Physico.rotate[2], [0, 0, 1]);
+
+	    this.gl.enable(this.gl.BLEND);
 	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lb);
 		this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.lb.itemSize, this.gl.FLOAT, false, 0, 0);
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lbc);
 		this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.lbc.itemSIze, this.gl.FLOAT, false, 0, 0);
 		this.setMatrixUniforms();
-		this.gl.drawArrays(this.gl.LINES, 0, this.lb.numItems);
-
+		this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.lb.numItems);
+		mat4.rotate(this.mvMatrix, Math.PI / 2, [0, 1, 0])
+		this.setMatrixUniforms();
+		this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.lb.numItems);
+		mat4.rotate(this.mvMatrix, -Math.PI / 2, [0, 1, 0])
+		mat4.rotate(this.mvMatrix, Math.PI / 2, [1, 0, 0])
+		this.setMatrixUniforms();
+		this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.lb.numItems);
+		mat4.rotate(this.mvMatrix, -Math.PI / 2, [1, 0, 0])
+		this.gl.disable(this.gl.BLEND)
+		this.gl.disable(this.gl.DEPTH_TEST);
         for (obj in Physico.ObjectList.objects) {
-            if(obj) pobj = Physico.ObjectList.objects[obj - 1]
+            if(obj > 0) pobj = Physico.ObjectList.objects[obj - 1]
+	    else { pobj={}; pobj.x=pobj.y=pobj.z=0; }
             obj = Physico.ObjectList.objects[obj];
-            mat4.translate(this.mvMatrix, [obj.x, obj.y, -obj.z]);
+
+            mat4.translate(this.mvMatrix, [obj.x - pobj.x, obj.y - pobj.y, -obj.z + pobj.z]);
+            this.gl.enable(this.gl.DEPTH_TEST)
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[obj.color]);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[obj.color].itemSize, this.gl.FLOAT, false, 0, 0);
             this.setMatrixUniforms();
             this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.pBuffer.numItems);
+
+            this.gl.disable(this.gl.DEPTH_TEST)
+	        this.gl.enable(this.gl.BLEND);
 
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
@@ -567,8 +602,7 @@ Physico.GL = {
             this.setMatrixUniforms();
             this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.pbBuffer.numItems);
 
-
-            mat4.translate(this.mvMatrix, [-obj.x, -obj.y, obj.z]);
+	        this.gl.disable(this.gl.BLEND)
         }
     },
     init: function()    {

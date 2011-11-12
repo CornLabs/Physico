@@ -140,21 +140,27 @@ footer p{
 	left: 0;
 	top: 0;
 	z-index: 10;
-	width: 0;
 	height: 0;
-	border:  solid 15px transparent;
-	border-top-color: rgba(0, 0, 0, 0.2);
-	border-left-color: rgba(0, 0, 0, 0.2);
-	-moz-transition: all 0.25s ease-in;
-	-webkit-transition: all 0.25s ease-in;
-	font-size: 10pt;
+    border: none;
+	border-top:  solid 30px rgba(0, 0, 0, 0.4);
+	border-right: solid 30px transparent;
+	-moz-transition: all 0.15s ease-in;
+	-webkit-transition: all 0.15s ease-in;
+	font-size: 0pt;
 	margin:  0;
-	padding:  0;
+	padding: 0
+}
+.switch span{
+	font-size: 11pt;
+	color: white;
+	line-height: 30px;
+	padding: 0 10px;
+	display: block;
+    margin: -30px 0 0 0;
 }
 .GUI-active .switch{
-	border-width:  25px;
+    border :solid 25px rgba(0, 0, 0, 0.8) !important;
 	box-shadow: 0 0 15px black;
-	border-color: rgba(0, 0, 0, 0.8)
 }
 .switch:hover{
 	border-top-color: rgba(0, 0, 0, 0.8);

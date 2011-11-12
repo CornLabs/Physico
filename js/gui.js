@@ -2,7 +2,9 @@ GUI = {
 	init: function(callback)    {
 		this.sw = document.createElement('div')
 		this.sw.className = "switch"
-		this.sw.innerHTML = "MENU"
+		this.swc = document.createElement('span')
+		this.swc.innerHTML = "MENU"
+		this.sw.appendChild(this.swc)
 		this.sw.onclick = GUI.toggleActiveState
 		document.body.appendChild(this.sw)
 		this.itooltip = document.createElement('div')
@@ -14,6 +16,7 @@ GUI = {
 		this.icredits.innerHTML = "(c) CornLabs 2011"
 		document.body.appendChild(this.icredits)
 		document.onkeydown = GUI.inactiveKeyHandler
+		document.onkeyup = GUI.inactiveKeyUpHandler
 		callback()
 	},
 	toggleActiveState: function()   {
@@ -22,7 +25,8 @@ GUI = {
 	},
 	activateGUI: function() {
 		GUI.addClass(document.body, "GUI-active")
-		this.sw.innerHTML = ""
+		this.swc.innerHTML = ""
+        this.swc.style.padding = 0
 		setTimeout("GUI.activateGUIP2()", 10)
 
 		this.hdr = document.createElement('header')
@@ -76,6 +80,7 @@ GUI = {
 		this.hdrc.innerHTML = "Select your poison! <span class='red dark'>A tooltip will appear here to let you know what you're doing</span>"
 
 		document.onkeydown = GUI.activeKeyHandler
+		document.onkeyup = GUI.inactiveKeyUpHandler
 
 		this.active = 1
 		console.log("GUI Activated")
@@ -91,9 +96,11 @@ GUI = {
 		document.body.removeChild(this.ct)
 		document.body.removeChild(this.hdr)
 		document.body.removeChild(this.ftr)
-		GUI.sw.innerHTML = "MENU"
+		GUI.swc.innerHTML = "MENU"
+        GUI.swc.style.padding = "0 10px"
 		GUI.active = 0;
 		document.onkeydown = GUI.inactiveKeyHandler
+		document.onkeyup = GUI.inactiveKeyUpHandler
 		console.log("GUI Deactivated")
 	},
 	tip: function(text) {
@@ -130,8 +137,12 @@ GUI = {
 	removeClass: function(to, cl)    {
 		to.className = to.className.substr(0, to.className.indexOf(cl))
 	},
-	inactiveKeyHandler: function(e) {
+	inactiveKeyHandler: function(e){
+				    console.log(e.keyCode)
 		switch(e.keyCode)   {
+			case 17:
+				Physico.rotationChange = 1;
+				break;
 			case 33:
 				Physico.scene[2] -= 1;
 				break;
@@ -139,16 +150,20 @@ GUI = {
 				Physico.scene[2] += 1;
 				break;
 			case 37:
-				Physico.scene[0] -= 1;
+				if (Physico.rotationChange) Physico.rotate[1]-= Math.PI / 100
+				else Physico.scene[0] -= 1;
 				break;
 			case 38:
-				Physico.scene[1] += 1;
+				if (Physico.rotationChange) Physico.rotate[0]+= Math.PI / 100
+				else Physico.scene[1] += 1;
 				break;
 			case 39:
-				Physico.scene[0] += 1;
+				if (Physico.rotationChange) Physico.rotate[1]+= Math.PI / 100
+				else Physico.scene[0] += 1;
 				break;
 			case 40:
-				Physico.scene[1] -= 1;
+				if (Physico.rotationChange) Physico.rotate[0]-= Math.PI / 100
+				else Physico.scene[1] -= 1;
 				break;
 			case 46:
 				Physico.scene = [0, 0, -15]
@@ -158,16 +173,25 @@ GUI = {
 				break;
 		}
 	},
+	inactiveKeyUpHandler: function(e){
+        console.log(e.keyCode)
+		switch(e.keyCode)	{
+			case 17:
+				Physico.rotationChange = 0
+		}
+	},
 	activeKeyHandler: function(e)   {
 		k = e.keyCode || e.which
 		if (GUI.ftrif) return
-//		console.log(k)
 		switch(k)   {
-			case 76: GUI.toggleExecLog(); break;
+			case 76: GUI.toggleExecLog();
 			case 67: GUI.ftri.focus(); break;
 			case 77: GUI.toggleActiveState(); break;
 		}
 	},
+    activeKeyUpHandler: function(e) {
+
+    },
 	hdr: null,
 	sw: null,
 	ct: null,
