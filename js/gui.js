@@ -138,7 +138,6 @@ GUI = {
 		to.className = to.className.substr(0, to.className.indexOf(cl))
 	},
 	inactiveKeyHandler: function(e){
-				    console.log(e.keyCode)
 		switch(e.keyCode)   {
 			case 17:
 				Physico.rotationChange = 1;
@@ -174,7 +173,6 @@ GUI = {
 		}
 	},
 	inactiveKeyUpHandler: function(e){
-        console.log(e.keyCode)
 		switch(e.keyCode)	{
 			case 17:
 				Physico.rotationChange = 0

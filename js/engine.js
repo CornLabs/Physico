@@ -468,26 +468,59 @@ Physico.GL = {
         this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
     },
     initBuffer: function(){
-        this.pBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
-        var angle;
-        var vertices = [0, 0, 0]
-        for(i = 0; i <= 100; i++)   {
-            angle = Math.PI * 2 * (i / 100);
-            vertices.push(Math.cos(angle), Math.sin(angle), 0);
-        }
-        this.pBuffer.numItems = 102
-        vertices = new Float32Array(vertices);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
-        this.pBuffer.itemSize = 3
+        var latitudeBands = 30;
+          var longitudeBands = 30;
+          var radius = 1;
 
+           var vertexPositionData = [];
+           var normalData = [];
+           var textureCoordData = [];
+            var colorData = [];
+           for (var latNumber = 0; latNumber <= latitudeBands; latNumber++) {
+             var theta = latNumber * Math.PI / latitudeBands;
+             var sinTheta = Math.sin(theta);
+             var cosTheta = Math.cos(theta);
 
+             for (var longNumber = 0; longNumber <= longitudeBands; longNumber++) {
+               var phi = longNumber * 2 * Math.PI / longitudeBands;
+               var sinPhi = Math.sin(phi);
+               var cosPhi = Math.cos(phi);
 
+               var x = cosPhi * sinTheta;
+               var y = cosTheta;
+               var z = sinPhi * sinTheta;
+               var u = 1 - (longNumber / longitudeBands);
+               var v = 1 - (latNumber / latitudeBands);
+
+               normalData.push(x);
+               normalData.push(y);
+               normalData.push(z);
+               textureCoordData.push(u);
+               textureCoordData.push(v);
+               vertexPositionData.push(radius * x);
+               vertexPositionData.push(radius * y);
+               vertexPositionData.push(radius * z);
+             }
+           }
+         var indexData = [];
+            for (var latNumber = 0; latNumber < latitudeBands; latNumber++) {
+              for (var longNumber = 0; longNumber < longitudeBands; longNumber++) {
+                var first = (latNumber * (longitudeBands + 1)) + longNumber;
+                var second = first + longitudeBands + 1;
+                indexData.push(first);
+                indexData.push(second);
+                indexData.push(first + 1);
+
+                indexData.push(second);
+                indexData.push(second + 1);
+                indexData.push(first + 1);
+              }
+            }
         var vertices = [];
         for (j = 0; j < Physico.ObjectList.colors.length; j++)  {
             vertices[j] = [];
-            vertices[j].push(Physico.ObjectList.colors[j][0][0], Physico.ObjectList.colors[j][0][1], Physico.ObjectList.colors[j][0][2], Physico.ObjectList.colors[j][0][3])
-            for(i = 0; i <= 100; i++)   {
+            for(i = 0; i <= latitudeBands * longitudeBands; i++)   {
+                for(p = 0; p < 3; p++)
                 vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
             }
         }
@@ -498,9 +531,22 @@ Physico.GL = {
 
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[j]);
             this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);
-            this.cBuffer[j].numItems = 102;
+            this.cBuffer[j].numItems = latitudeBands * longitudeBands;
             this.cBuffer[j].itemSize = 4;
         }
+
+        this.pBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), this.gl.STATIC_DRAW);
+        this.pBuffer.itemSize = 3;
+        this.pBuffer.numItems = vertexPositionData.length / 3;
+
+
+         this.iBuffer = this.gl.createBuffer();
+          this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
+          this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), this.gl.STATIC_DRAW);
+          this.iBuffer.itemSize = 3;
+          this.iBuffer.numItems = indexData.length;
 
         this.pbBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
@@ -589,8 +635,10 @@ Physico.GL = {
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[obj.color]);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[obj.color].itemSize, this.gl.FLOAT, false, 0, 0);
+
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
             this.setMatrixUniforms();
-            this.gl.drawArrays(this.gl.TRIANGLE_FAN, 0, this.pBuffer.numItems);
+            this.gl.drawElements(this.gl.TRIANGLES, this.iBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
 
             this.gl.disable(this.gl.DEPTH_TEST)
 	        this.gl.enable(this.gl.BLEND);
