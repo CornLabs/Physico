@@ -166,6 +166,7 @@ GUI = {
 				break;
 			case 46:
 				Physico.scene = [0, 0, -15]
+                Physico.rotate = [0, 0, 0]
 				break;
 			case 77:
 				GUI.toggleActiveState()

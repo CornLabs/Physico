@@ -194,8 +194,8 @@ Physico.ObjectList = {
     }, 
     colors: [
     [[0.5, 1.0, 1.0, 1.0], [0, 0.2, 1.0, 1.0]],
-    [[0.2, 0.2, 0.2, 1.0], [0, 0, 0, 1.0]],
-    [[1.0, 0.0, 0.02, 1.0], [0.2, 0.0, 0.0, 1.0]],
+    [[0.2, 0.2, 0.2, 1.0], [0.2, 0.2, 0.2, 1.0]],
+    [[1.0, 0.0, 0.2, 1.0], [0.2, 0.0, 0.0, 1.0]],
     [[0.2, 1.0, 0.0, 1.0], [0.0, 0.3, 0.0, 1.0]]
     ]
 }
@@ -463,9 +463,14 @@ Physico.GL = {
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
         this.shaderProgram.vertexColorAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexColor");
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexColorAttribute);
+        this.shaderProgram.vertexNormalAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexNormal");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexNormalAttribute);
 
         this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
         this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
+        this.shaderProgram.nMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uNMatrix");
+        this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, "uLightingDirection");
+        this.shaderProgram.isObject = this.gl.getUniformLocation(this.shaderProgram, "isObject");
     },
     initBuffer: function(){
         var latitudeBands = 30;
@@ -542,11 +547,28 @@ Physico.GL = {
         this.pBuffer.numItems = vertexPositionData.length / 3;
 
 
+        this.nBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.nBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(normalData), this.gl.STATIC_DRAW);
+        this.nBuffer.itemSize = 3;
+        this.nBuffer.numItems = normalData.length / 3;
+
+
          this.iBuffer = this.gl.createBuffer();
           this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
           this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), this.gl.STATIC_DRAW);
           this.iBuffer.itemSize = 3;
           this.iBuffer.numItems = indexData.length;
+
+      var lightingDirection = [
+        5, -3, -3
+      ];
+      var adjustedLD = vec3.create();
+      vec3.normalize(lightingDirection, adjustedLD);
+      vec3.scale(adjustedLD, -1);
+      this.gl.uniform3fv(this.shaderProgram.lightingDirectionUniform, adjustedLD);
+
+        this.normalMatrix = mat3.create();
 
         this.pbBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
@@ -599,13 +621,27 @@ Physico.GL = {
     },
     drawScene: function() {
         this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-        mat4.perspective(45, window.innerWidth / window.innerHeight, 0.1, 1000.0, this.pMatrix);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
+        
+        mat4.perspective(30, window.innerWidth / window.innerHeight, 0.1, 9999.0, this.pMatrix);
         mat4.identity(this.mvMatrix);
+        mat4.toInverseMat3(this.mvMatrix, this.normalMatrix);
+        mat3.transpose(this.normalMatrix);
+        this.gl.uniformMatrix3fv(this.shaderProgram.nMatrixUniform, false, this.normalMatrix);
+        
         mat4.translate(this.mvMatrix, Physico.scene)
         mat4.rotate(this.mvMatrix, Physico.rotate[0], [1, 0, 0]);
         mat4.rotate(this.mvMatrix, Physico.rotate[1], [0, 1, 0]);
         mat4.rotate(this.mvMatrix, Physico.rotate[2], [0, 0, 1]);
+
+        this.printPlanes();
+        this.printObjects();
+
+    },
+    printPlanes: function() {
+        this.gl.disable(this.gl.DEPTH_TEST);
+        this.gl.uniform1i(this.shaderProgram.isObject, 0);
 
 	    this.gl.enable(this.gl.BLEND);
 	    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lb);
@@ -622,35 +658,30 @@ Physico.GL = {
 		this.setMatrixUniforms();
 		this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.lb.numItems);
 		mat4.rotate(this.mvMatrix, -Math.PI / 2, [1, 0, 0])
+
 		this.gl.disable(this.gl.BLEND)
 		this.gl.disable(this.gl.DEPTH_TEST);
+    },
+    printObjects: function()    {
         for (obj in Physico.ObjectList.objects) {
+            this.gl.uniform1i(this.shaderProgram.isObject, 1);
             if(obj > 0) pobj = Physico.ObjectList.objects[obj - 1]
-	    else { pobj={}; pobj.x=pobj.y=pobj.z=0; }
-            obj = Physico.ObjectList.objects[obj];
+	        else { pobj={}; pobj.x=pobj.y=pobj.z=0; }
 
+            obj = Physico.ObjectList.objects[obj];
             mat4.translate(this.mvMatrix, [obj.x - pobj.x, obj.y - pobj.y, -obj.z + pobj.z]);
             this.gl.enable(this.gl.DEPTH_TEST)
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[obj.color]);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[obj.color].itemSize, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.nBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexNormalAttribute, this.nBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
             this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
             this.setMatrixUniforms();
             this.gl.drawElements(this.gl.TRIANGLES, this.iBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
 
-            this.gl.disable(this.gl.DEPTH_TEST)
-	        this.gl.enable(this.gl.BLEND);
-
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
-            this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
-            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-            this.setMatrixUniforms();
-            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.pbBuffer.numItems);
-
-	        this.gl.disable(this.gl.BLEND)
         }
     },
     init: function()    {
