@@ -17,6 +17,7 @@ GUI = {
 		document.body.appendChild(this.icredits)
 		document.onkeydown = GUI.inactiveKeyHandler
 		document.onkeyup = GUI.inactiveKeyUpHandler
+        if (typeof(GUI.IOS) != "undefined") GUI.IOS.init();
 		callback()
 	},
 	toggleActiveState: function()   {

@@ -1,15 +1,19 @@
-﻿Physico = {
+Physico = {
     canvas: null,
     menu: null,
+    runningNativeMode: true,
     init: function () {
+        document.body.innerHTML = "";
 		s = document.createElement("script")
-		s.src = "/js/libs/cl/CLFramework.js"
-		s.onload = function()	{
-			CL.Framework.modulesDir = "/js/libs/cl/"
+		s.src = "js/libs/cl/CLFramework.js"		
+        s.onload = function()	{
+            CL.Framework.runningNative = true;
+			CL.Framework.modulesDir = "js/libs/cl/"
 			CL.Framework.init(function() {
-				CL.DynamicFileLoader.addLib("screen", "/css/screen.css")
-				CL.DynamicFileLoader.addLib("glMatrix", "/js/glMatrix-0.9.5.min.js")
-				CL.DynamicFileLoader.addLib("gui", "/js/gui.js")
+				CL.DynamicFileLoader.addLib("screen", "css/screen.css")
+				CL.DynamicFileLoader.addLib("glMatrix", "js/glMatrix-0.9.5.min.js")
+				CL.DynamicFileLoader.addLib("gui", "js/gui.js")
+				CL.DynamicFileLoader.addLib("ios", "js/ios.js")
 				CL.DynamicFileLoader.processQueue(function(){GUI.init(Physico.loadShaders)})
 			});
 			document.head.removeChild(this)
@@ -99,7 +103,8 @@
         }
     },
     loadShaders: function()	{
-        CL.ShaderLoader.loadFiles(
+        if (Physico.runningNativeMode == false) {
+            CL.ShaderLoader.loadFiles(
             Physico.webglshaders, 
             CL.ShaderLoader.appendShaders, 
             function(url) {
@@ -107,6 +112,13 @@
             },
             Physico.completeLoad
             );
+        }   else {            
+            var iframe = document.createElement("IFRAME");
+            iframe.setAttribute("src", "call:loadShaders");
+            document.documentElement.appendChild(iframe);
+            iframe.parentNode.removeChild(iframe);
+            iframe = null;
+        }
     },
 	completeLoad: function()	{	
 	        Physico.createElements();
@@ -115,9 +127,10 @@
 	        Physico.Animator.AnimationTimer = new Physico.Timer();
 	        Physico.Animator.AnimationTimer.animate = function () {
 	            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
-	            Physico.GL.drawScene();
+                Physico.GL.drawScene();
+                console.log("animation tick");
 	        }
-	        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
+        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
 	},
     timers: [],
     timerc: 0,
@@ -127,7 +140,7 @@
     rotate: [0, 0, 0],
     sceneDrag: null,
     sceneZoom: 1,
-    webglshaders: [['/webgl/fragment', 'x-shader/x-fragment'], ['/webgl/vertex', 'x-shader/x-vertex']]
+    webglshaders: [['webgl/fragment', 'x-shader/x-fragment'], ['webgl/vertex', 'x-shader/x-vertex']]
 }
 Physico.Animator = { }
 
@@ -414,7 +427,6 @@ Physico.GL = {
         gl.compileShader(shader);
 
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            alert(this.gl.getShaderInfoLog(shader));
             return null;
         }
 
@@ -623,20 +635,24 @@ Physico.GL = {
         this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
+        console.log("No fliosc");
         
         mat4.perspective(30, window.innerWidth / window.innerHeight, 0.1, 9999.0, this.pMatrix);
         mat4.identity(this.mvMatrix);
         mat4.toInverseMat3(this.mvMatrix, this.normalMatrix);
         mat3.transpose(this.normalMatrix);
         this.gl.uniformMatrix3fv(this.shaderProgram.nMatrixUniform, false, this.normalMatrix);
+        console.log("No fliosc");
         
         mat4.translate(this.mvMatrix, Physico.scene)
         mat4.rotate(this.mvMatrix, Physico.rotate[0], [1, 0, 0]);
         mat4.rotate(this.mvMatrix, Physico.rotate[1], [0, 1, 0]);
         mat4.rotate(this.mvMatrix, Physico.rotate[2], [0, 0, 1]);
+        console.log("No fliosc");
 
         this.printPlanes();
         this.printObjects();
+        console.log("Drawn Scene");
 
     },
     printPlanes: function() {
@@ -690,6 +706,16 @@ Physico.GL = {
         this.initBuffer();
     }
 }
+
+
+console.log = function(log)    {
+            var iframe = document.createElement("IFRAME");
+            iframe.setAttribute("src", "call:logThing:"+log);
+            document.documentElement.appendChild(iframe);
+            iframe.parentNode.removeChild(iframe);
+            iframe = null;
+}
+
 
 
 window.onresize = function()    {
