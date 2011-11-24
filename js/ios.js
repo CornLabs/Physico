@@ -1,15 +1,18 @@
 
 
-GUI.IOS= {
-    init: function()    {
-        document.addEventListener( 'touchcancel', GUI.IOS.sendEvents['cancel'], false);
-        document.addEventListener( 'touchstart', GUI.IOS.sendEvents['start'], false);
-        document.addEventListener( 'touchmove', GUI.IOS.sendEvents['move'], false);
-        document.addEventListener( 'touchend', GUI.IOS.sendEvents['end'], false);
+GUI = {
+    init: function(callback)    {
+        console.log('init');
+        document.addEventListener( 'touchcancel', GUI.sendEvents['cancel'], false);
+        document.addEventListener( 'touchstart', GUI.sendEvents['start'], false);
+        document.addEventListener( 'touchmove', GUI.sendEvents['move'], false);
+        document.addEventListener( 'touchend', GUI.sendEvents['end'], false);
+        console.log(typeof(callback))
+        if (typeof(callback) == "function") callback();
     },
     sendEvents: {
         "start": function(e) {
-        GUI.IOS.sendEvent("startTouch", "");        
+        GUI.sendEvent("startTouch", "");        
         },
         "cancel": function(e) {
         },
@@ -17,7 +20,7 @@ GUI.IOS= {
         e.preventDefault();
         },
         "end": function(e) {
-        GUI.IOS.sendEvent("endTouch", "");
+        GUI.sendEvent("endTouch", "");
         },
     },
     sendEvent: function(event, data)  {    

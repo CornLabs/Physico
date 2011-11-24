@@ -2,19 +2,20 @@ Physico = {
     canvas: null,
     menu: null,
     runningNativeMode: true,
+    guiScript: "gui",
+    prefix: "/",
     init: function () {
         document.body.innerHTML = "";
 		s = document.createElement("script")
-		s.src = "js/libs/cl/CLFramework.js"		
+		s.src = Physico.prefix + "js/libs/cl/CLFramework.js"	
         s.onload = function()	{
             CL.Framework.runningNative = true;
-			CL.Framework.modulesDir = "js/libs/cl/"
+			CL.Framework.modulesDir = Physico.prefix + "js/libs/cl/"
 			CL.Framework.init(function() {
-				CL.DynamicFileLoader.addLib("screen", "css/screen.css")
-				CL.DynamicFileLoader.addLib("glMatrix", "js/glMatrix-0.9.5.min.js")
-				CL.DynamicFileLoader.addLib("gui", "js/gui.js")
-				CL.DynamicFileLoader.addLib("ios", "js/ios.js")
-				CL.DynamicFileLoader.processQueue(function(){GUI.init(Physico.loadShaders)})
+				CL.DynamicFileLoader.addLib("screen", Physico.prefix + "css/screen.css")
+				CL.DynamicFileLoader.addLib("glMatrix", Physico.prefix + "js/glMatrix-0.9.5.min.js")
+				CL.DynamicFileLoader.addLib(Physico.guiScript, Physico.prefix + "js/" + Physico.guiScript + ".js")
+                CL.DynamicFileLoader.processQueue(function(){GUI.init(Physico.loadShaders)})
 			});
 			document.head.removeChild(this)
 		}
