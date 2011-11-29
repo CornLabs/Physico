@@ -1,7 +1,7 @@
 Physico = {
     canvas: null,
     menu: null,
-    runningNativeMode: true,
+    runningNativeMode: false,
     guiScript: "gui",
     prefix: "/",
     init: function () {
@@ -55,46 +55,7 @@ Physico = {
         this.canvas.style.top = 0;
         this.canvas.style.left = 0;
         this.canvas.style.zindex = 1;
-        this.canvas.contextmenu = "contextmenu"
-        this.canvas.onmousemove = function(e)    {
-            if (Physico.sceneDrag == null) return;
-            m = Physico.getMouseCoords(e);
-            if (Physico.rotationChange)  {
-                x = m.x - Physico.sceneDrag.x
-                y = m.y - Physico.sceneDrag.y
-                Physico.rotate[1] += x / 5000;
-                Physico.rotate[0] += y / 5000;
-            } else {
-                Physico.scene[0] += (m.x - Physico.sceneDrag.x) / 250;
-                Physico.scene[1] -= (m.y - Physico.sceneDrag.y) / 250;
-            }
-            e.preventDefault();
-        }
-        this.canvas.onmousedown = function(e)   {
-            Physico.sceneDrag = Physico.getMouseCoords(e);            
-            this.style.cursor = "pointer"
-        }
-        this.canvas.onmouseup = function(e) {
-            Physico.sceneDrag = null
-            this.style.cursor = "default"
-        }
-        this.canvas.ondblclick = function() {
-            if (Physico.sceneZoom)  {
-                Physico.scene[2] += 50
-                Physico.sceneZoom = 0;
-            } else {
-                Physico.scene[2] -= 50
-                Physico.sceneZoom = 1;
-            }
-        }
-        
-        var mousewheelevt=(/Firefox/i.test(navigator.userAgent))? "DOMMouseScroll" : "mousewheel" 
-        document.addEventListener(mousewheelevt, function(e){
-	        if(GUI.active) return
-            Physico.scene[2] -= (e.wheelDeltaY ? e.wheelDeltaY / 250 : -e.detail / 3);
-            e.preventDefault();
-        }, false)
-
+        this.canvas.style.background = "url(" + Physico.prefix + "textures/back.png) no-repeat center center";
         document.body.appendChild(this.canvas);  
     },
     getMouseCoords: function(e) {
@@ -129,8 +90,9 @@ Physico = {
 	        Physico.Animator.AnimationTimer.animate = function () {
 	            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
                 Physico.GL.drawScene();
-                console.log("animation tick");
 	        }
+            if (typeof(GUI.finishLoad) == "function") GUI.finishLoad();
+        Physico.musicPlayer.init();
         Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
 	},
     timers: [],
@@ -636,24 +598,20 @@ Physico.GL = {
         this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
-        console.log("No fliosc");
         
         mat4.perspective(30, window.innerWidth / window.innerHeight, 0.1, 9999.0, this.pMatrix);
         mat4.identity(this.mvMatrix);
         mat4.toInverseMat3(this.mvMatrix, this.normalMatrix);
         mat3.transpose(this.normalMatrix);
         this.gl.uniformMatrix3fv(this.shaderProgram.nMatrixUniform, false, this.normalMatrix);
-        console.log("No fliosc");
         
         mat4.translate(this.mvMatrix, Physico.scene)
         mat4.rotate(this.mvMatrix, Physico.rotate[0], [1, 0, 0]);
         mat4.rotate(this.mvMatrix, Physico.rotate[1], [0, 1, 0]);
         mat4.rotate(this.mvMatrix, Physico.rotate[2], [0, 0, 1]);
-        console.log("No fliosc");
 
         this.printPlanes();
         this.printObjects();
-        console.log("Drawn Scene");
 
     },
     printPlanes: function() {
@@ -698,6 +656,17 @@ Physico.GL = {
             this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
             this.setMatrixUniforms();
             this.gl.drawElements(this.gl.TRIANGLES, this.iBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
+            
+            this.gl.disable(this.gl.DEPTH_TEST)
+	        this.gl.enable(this.gl.BLEND);
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+            this.setMatrixUniforms();
+
+	        this.gl.disable(this.gl.BLEND)
 
         }
     },
@@ -708,13 +677,31 @@ Physico.GL = {
     }
 }
 
-
-console.log = function(log)    {
-            var iframe = document.createElement("IFRAME");
-            iframe.setAttribute("src", "call:logThing:"+log);
-            document.documentElement.appendChild(iframe);
-            iframe.parentNode.removeChild(iframe);
-            iframe = null;
+Physico.musicPlayer = {
+player: null,
+source: null,
+tracks:[
+    'inchains.mp3',
+        'bjango.mp3',
+        'endtitles.mp3',
+        'derezzed.mp3'
+],
+prefix: 'tracks/',
+init: function()    {
+    var mp = Physico.musicPlayer;
+    mp.player = document.createElement('audio')
+    mp.player.ended = Physico.musicPlayer.shuffle() 
+    document.body.appendChild(mp.player)
+    mp.shuffle()
+},
+shuffle: function() {
+    var mp = Physico.musicPlayer;
+    mp.player.pause();
+    track = Math.round(Math.random() * (mp.tracks.length - 1));
+    track = mp.tracks[track]
+    mp.player.src = Physico.prefix + mp.prefix + track;
+    mp.player.play();
+}
 }
 
 

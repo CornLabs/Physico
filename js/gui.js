@@ -17,9 +17,89 @@ GUI = {
 		document.body.appendChild(this.icredits)
 		document.onkeydown = GUI.inactiveKeyHandler
 		document.onkeyup = GUI.inactiveKeyUpHandler
-        if (typeof(GUI.IOS) != "undefined") GUI.IOS.init();
 		callback()
 	},
+    accel: [0, 0, 0],
+    continueCount: 0,
+    continueTransition: function(alter)  {
+        GUI.accel[0] -= GUI.accel[0] * 0.05;
+        GUI.accel[1] -= GUI.accel[1] * 0.05;
+        GUI.accel[2] -= GUI.accel[2] * 0.05;
+        GUI.continueCount ++;
+        if ((Math.abs(GUI.accel[0]) > 0.001 || Math.abs(GUI.accel[1]) > 0.001 || Math.abs(GUI.accel[2]) > 0.1) && GUI.continueCount < 200)   {
+            if (alter) {            
+                Physico.rotate[0] += GUI.accel[1];
+                Physico.rotate[1] += GUI.accel[0];
+            }   else    {
+                console.log(Physico.scene);
+                Physico.scene[0] += GUI.accel[0]; 
+                Physico.scene[1] -= GUI.accel[1];        
+            }
+            console.log(alter);
+            Physico.scene[2] += GUI.accel[2];
+            setTimeout("GUI.continueTransition(" + alter + ")", 10);
+        }   else    {
+            GUI.continueCount = 0;
+            GUI.accel = [0, 0, 0]
+            console.log(alter)
+        }
+    },
+    finishLoad: function()  {
+    
+        Physico.canvas.onmousemove = function(e)    {
+            if (Physico.sceneDrag == null) return;
+            m = Physico.getMouseCoords(e);
+            x = m.x - Physico.sceneDrag.x
+            y = m.y - Physico.sceneDrag.y
+            if (Physico.rotationChange)  {
+                GUI.accel[0] = x / 5000;
+                GUI.accel[1] = y / 5000;
+                Physico.rotate[1] += GUI.accel[0];
+                Physico.rotate[0] += GUI.accel[1];
+            } else {
+                GUI.accel[0] = x / 250;
+                GUI.accel[1] = y / 250;
+                Physico.scene[0] += GUI.accel[0];
+                Physico.scene[1] -= GUI.accel[1];
+            }
+            e.preventDefault();
+        }
+        Physico.canvas.onmousedown = function(e)   {
+            GUI.accel = [0, 0, 0]
+            Physico.rotationChange = 0;
+            if (e.button == 2)  Physico.rotationChange = 1;
+            Physico.sceneDrag = Physico.getMouseCoords(e);            
+            this.style.cursor = "pointer"
+        }
+        Physico.canvas.onmouseup = function(e) {
+            GUI.continueTransition(Physico.rotationChange)
+            if (e.button == 2)  Physico.rotationChange = 0;
+            Physico.sceneDrag = null
+            this.style.cursor = "default"
+        }
+        Physico.canvas.ondblclick = function() {
+            if (Physico.sceneZoom)  {
+                Physico.scene[2] += 50
+                Physico.sceneZoom = 0;
+            } else {
+                Physico.scene[2] -= 50
+                Physico.sceneZoom = 1;
+            }
+        }        
+        Physico.canvas.oncontextmenu = function(e)  {
+            e.preventDefault();
+        }
+        
+        var mousewheelevt=(/Firefox/i.test(navigator.userAgent))? "DOMMouseScroll" : "mousewheel" 
+        document.addEventListener(mousewheelevt, function(e)
+                                  {                           
+                                  if(GUI.active) return;
+                                  Physico.scene[2] -= (e.wheelDeltaY ? e.wheelDeltaY / 250 : -e.detail / 3);
+            e.preventDefault();
+        }, false)
+
+
+    },
 	toggleActiveState: function()   {
 			if (GUI.active)    GUI.deactivateGUI()
 			else GUI.activateGUI();
@@ -222,6 +302,11 @@ GUI = {
 			"Wind" : function() { Physico.Animator.ToggleEnvForce("wind") },
 			"Inverse Gravity" : function() { Physico.Animator.ToggleEnvForce("repulse") },
 			"Inverse Wind" : function() { Physico.Animator.ToggleEnvForce("inverse-wind") }
+		},
+		"Music Player :" : {
+			"Play Track" : function() { Physico.musicPlayer.player.play() },
+			"Pause Track" : function() { Physico.musicPlayer.player.pause() },
+			"Shuffle Tracks" : function() { Physico.musicPlayer.shuffle() },
 		}
 	},
 	createMenu: function(object)  {
