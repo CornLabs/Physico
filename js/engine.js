@@ -680,14 +680,14 @@ Physico.GL = {
 Physico.musicPlayer = {
 player: null,
 source: null,
-tracks:[
-    'inchains.mp3',
-        'bjango.mp3',
-        'endtitles.mp3',
-        'derezzed.mp3'
-],
+tracks: null,
 prefix: 'tracks/',
 init: function()    {
+    var mp = Physico.musicPlayer;
+    CL.DynamicFileLoader.addLib('tracklist', "tracks/list.js")
+    CL.DynamicFileLoader.processQueue(Physico.musicPlayer.load)
+},
+load: function()	{
     var mp = Physico.musicPlayer;
     mp.player = document.createElement('audio')
     mp.player.ended = Physico.musicPlayer.shuffle() 
@@ -697,8 +697,8 @@ init: function()    {
 shuffle: function() {
     var mp = Physico.musicPlayer;
     mp.player.pause();
-    track = Math.round(Math.random() * (mp.tracks.length - 1));
-    track = mp.tracks[track]
+    track = Math.round(Math.random() * (mp.tracks.number - 1));
+    track = mp.tracks.tracks[track]
     mp.player.src = Physico.prefix + mp.prefix + track;
     mp.player.play();
 }
