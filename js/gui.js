@@ -97,7 +97,8 @@ GUI = {
                                   Physico.scene[2] -= (e.wheelDeltaY ? e.wheelDeltaY / 250 : -e.detail / 3);
             e.preventDefault();
         }, false)
-
+        
+        GUI.musicPlayer.init();
 
     },
 	toggleActiveState: function()   {
@@ -304,10 +305,15 @@ GUI = {
 			"Inverse Wind" : function() { Physico.Animator.ToggleEnvForce("inverse-wind") }
 		},
 		"Music Player :" : {
-			"Play Track" : function() { Physico.musicPlayer.player.play() },
-			"Pause Track" : function() { Physico.musicPlayer.player.pause() },
-			"Shuffle Tracks" : function() { Physico.musicPlayer.shuffle() },
-		}
+			"Play Track" : function() { GUI.musicPlayer.player.play() },
+			"Pause Track" : function() { GUI.musicPlayer.player.pause() },
+			"Shuffle Tracks" : function() { GUI.musicPlayer.shuffle() }
+		},
+        "Modes :" :{
+            "Toggle TrollMode" : function() { Physico.GL.toggleTroll() },
+            "Toggle PatriotMode" : function() { Physico.GL.togglePatriot() },
+            "Toggle Textures" : function() { Physico.GL.toggleTextures() }
+        }
 	},
 	createMenu: function(object)  {
 		var r = document.createElement("ul")
@@ -331,5 +337,32 @@ GUI = {
 		}
 		return r;
 
-	}
+	},
+    musicPlayer: {
+        player: null,
+        source: null,
+        tracks: null,
+        prefix: 'tracks/',
+        init: function()    {
+            var mp = GUI.musicPlayer;
+            CL.DynamicFileLoader.addLib('tracklist', "tracks/list.js")
+            CL.DynamicFileLoader.processQueue(GUI.musicPlayer.load)
+        },
+        load: function()	{
+            var mp = GUI.musicPlayer;
+            mp.player = document.createElement('audio')
+            mp.player.ended = GUI.musicPlayer.shuffle() 
+            document.body.appendChild(mp.player)
+            mp.shuffle()
+        },
+        shuffle: function() {
+            var mp = GUI.musicPlayer;
+            mp.player.pause();
+            track = Math.round(Math.random() * (mp.tracks.number - 1));
+            track = mp.tracks.files[track]
+            mp.player.src = Physico.prefix + mp.prefix + track;
+            mp.player.play();
+        }
+    }
+
 }

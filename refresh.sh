@@ -2,9 +2,15 @@
 
 
 scriptname=$(readlink "$0")
+if [ "$scriptname" == "" ]; then
+	scriptname=$0
+fi
 base="$(cd -P "$(dirname "$scriptname")" && pwd)" 
-files=$(ls $base/tracks)
-json="Physico.musicPlayer.tracks={'tracks':{"
+
+crawlAndList()
+{
+files=$(ls "$base/$1")
+json="$2={'files':{"
 no=0
 for file in $files
 do
@@ -15,4 +21,9 @@ do
 	fi
 done
 json=$json"}, number:"$no"}"
-echo $json > $base/tracks/list.js
+echo $json > $base/$1/list.js
+}
+
+crawlAndList "tracks" "GUI.musicPlayer.tracks"
+crawlAndList "textures/clasicmode" "Physico.GL.textureSources"
+crawlAndList "textures/trollmode" "Physico.GL.trolltextureSources"

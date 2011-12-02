@@ -1,0 +1,1 @@
+Physico.GL.textureSources={'files':{'0': '1.jpg', '1': '10.jpg', '2': '11.jpg', '3': '2.jpg', '4': '3.jpg', '5': '4.jpg', '6': '5.png', '7': '6.jpeg', '8': '7.gif', '9': '8.gif', '10': '9.png', }, number:11}

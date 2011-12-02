@@ -3,13 +3,13 @@ Physico = {
     menu: null,
     runningNativeMode: false,
     guiScript: "gui",
-    prefix: "/",
+    prefix: "",
     init: function () {
         document.body.innerHTML = "";
 		s = document.createElement("script")
 		s.src = Physico.prefix + "js/libs/cl/CLFramework.js"	
         s.onload = function()	{
-            CL.Framework.runningNative = true;
+                        CL.Framework.runningNative = true;
 			CL.Framework.modulesDir = Physico.prefix + "js/libs/cl/"
 			CL.Framework.init(function() {
 				CL.DynamicFileLoader.addLib("screen", Physico.prefix + "css/screen.css")
@@ -55,7 +55,6 @@ Physico = {
         this.canvas.style.top = 0;
         this.canvas.style.left = 0;
         this.canvas.style.zindex = 1;
-        this.canvas.style.background = "url(" + Physico.prefix + "textures/back.png) no-repeat center center";
         document.body.appendChild(this.canvas);  
     },
     getMouseCoords: function(e) {
@@ -84,16 +83,16 @@ Physico = {
     },
 	completeLoad: function()	{	
 	        Physico.createElements();
-	        Physico.GL.init();
-	        Physico.ObjectList.addObject();
-	        Physico.Animator.AnimationTimer = new Physico.Timer();
-	        Physico.Animator.AnimationTimer.animate = function () {
-	            for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
-                Physico.GL.drawScene();
-	        }
-            if (typeof(GUI.finishLoad) == "function") GUI.finishLoad();
-        Physico.musicPlayer.init();
-        Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
+	        Physico.GL.init(function() {             
+                Physico.ObjectList.addObject();
+                Physico.Animator.AnimationTimer = new Physico.Timer();
+                Physico.Animator.AnimationTimer.animate = function () {
+                    for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
+                        Physico.GL.drawScene();
+                }
+                if (typeof(GUI.finishLoad) == "function") GUI.finishLoad();
+                Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);   
+            });
 	},
     timers: [],
     timerc: 0,
@@ -169,10 +168,10 @@ Physico.ObjectList = {
         for(o in this.objects) this.objects[o].scramble();
     }, 
     colors: [
-    [[0.5, 1.0, 1.0, 1.0], [0, 0.2, 1.0, 1.0]],
-    [[0.2, 0.2, 0.2, 1.0], [0.2, 0.2, 0.2, 1.0]],
-    [[1.0, 0.0, 0.2, 1.0], [0.2, 0.0, 0.0, 1.0]],
-    [[0.2, 1.0, 0.0, 1.0], [0.0, 0.3, 0.0, 1.0]]
+        ["Blue", [0, 0.2, 1.0, 1.0]],
+        ["Gray", [0.6, 0.6, 0.6, 1.0]],
+        ["Red", [0.8, 0.0, 0.0, 1.0]],
+        ["Green", [0.0, 0.9, 0.0, 1.0]]
     ]
 }
 
@@ -326,6 +325,7 @@ Physico.Object = function(number) {
     
     this.id = number;
     this.color = Math.round(Math.random() * (Physico.ObjectList.colors.length - 1));
+    this.texture = Math.round(Math.random() * (Physico.GL.textureSources.length - 1));
     
     this.scramble = function()	{
         q = Math.round(Math.random() * 4); 
@@ -402,11 +402,11 @@ Physico.GL = {
     initGL: function(){
         try {
             this.canvas = Physico.canvas
-		this.pMatrix = mat4.create()
-		this.mvMatrix = mat4.create()
+            this.pMatrix = mat4.create()
+            this.mvMatrix = mat4.create()
             this.gl = this.canvas.getContext("experimental-webgl");
 	        this.updateViewport();
-            this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE)
+            this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
             this.gl.depthFunc(this.gl.LESS);
         } catch (e) {
         }
@@ -417,8 +417,10 @@ Physico.GL = {
     updateViewport: function()    {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.gl.viewportWidth = this.canvas.width;
-        this.gl.viewportHeight = this.canvas.height;
+        if (this.gl)    {        
+            this.gl.viewportWidth = this.canvas.width;
+            this.gl.viewportHeight = this.canvas.height;
+        }
     },
     initShaders: function(){
         var fragmentShader = this.getShader(this.gl, "fragment");
@@ -438,14 +440,18 @@ Physico.GL = {
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
         this.shaderProgram.vertexColorAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexColor");
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexColorAttribute);
+        this.shaderProgram.vertexTextureAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexTexture");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexTextureAttribute);
         this.shaderProgram.vertexNormalAttribute = this.gl.getAttribLocation(this.shaderProgram, "vertexNormal");
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexNormalAttribute);
 
         this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
         this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
         this.shaderProgram.nMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uNMatrix");
+        this.shaderProgram.uSamplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
         this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, "uLightingDirection");
         this.shaderProgram.isObject = this.gl.getUniformLocation(this.shaderProgram, "isObject");
+        this.shaderProgram.useTexture = this.gl.getUniformLocation(this.shaderProgram, "useTexture");
     },
     initBuffer: function(){
         var latitudeBands = 30;
@@ -499,13 +505,23 @@ Physico.GL = {
         var vertices = [];
         for (j = 0; j < Physico.ObjectList.colors.length; j++)  {
             vertices[j] = [];
-            for(i = 0; i <= latitudeBands * longitudeBands; i++)   {
-                for(p = 0; p < 3; p++)
-                vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
-            }
+            for(i = 0; i <= latitudeBands; i++)
+                for(k = 0; k <= longitudeBands; k++)
+                    for(p = 0; p < 3; p++)
+                        vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
+
         }
+        vertices[j] = [];
+        var c = 1;
+        for(i = 0; i <= latitudeBands; i++)
+            for(k = 0; k <= longitudeBands; k++)
+                    if (i < latitudeBands / 3)  vertices[j].push(1, 0, 0, 1)
+                    else if (i < latitudeBands / 3 * 2)  vertices[j].push(0.5, 0.6, 0, 1)
+                    else vertices[j].push(0, 0, 1, 1)
+        for(i = 0; i <= latitudeBands * longitudeBands; i++) for(p = 0; p < 2; p ++) vertices[j].push(0, 0, 0, 0)
         this.cBuffer = [];
-        for(j = 0; j < Physico.ObjectList.colors.length; j++)   {
+
+        for(j = 0; j < Physico.ObjectList.colors.length + 1; j++)   {
             this.cBuffer[j] = this.gl.createBuffer();
             v = new Float32Array(vertices[j]);
 
@@ -527,6 +543,12 @@ Physico.GL = {
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(normalData), this.gl.STATIC_DRAW);
         this.nBuffer.itemSize = 3;
         this.nBuffer.numItems = normalData.length / 3;
+        
+        this.tBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.tBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(textureCoordData), this.gl.STATIC_DRAW);
+        this.tBuffer.itemSize = 2;
+        this.tBuffer.numItems = normalData.length / 2;
 
 
          this.iBuffer = this.gl.createBuffer();
@@ -536,7 +558,7 @@ Physico.GL = {
           this.iBuffer.numItems = indexData.length;
 
       var lightingDirection = [
-        5, -3, -3
+        2, -3, -3
       ];
       var adjustedLD = vec3.create();
       vec3.normalize(lightingDirection, adjustedLD);
@@ -640,6 +662,7 @@ Physico.GL = {
     printObjects: function()    {
         for (obj in Physico.ObjectList.objects) {
             this.gl.uniform1i(this.shaderProgram.isObject, 1);
+            this.gl.uniform1i(this.shaderProgram.useTexture, this.useTextures)
             if(obj > 0) pobj = Physico.ObjectList.objects[obj - 1]
 	        else { pobj={}; pobj.x=pobj.y=pobj.z=0; }
 
@@ -648,61 +671,128 @@ Physico.GL = {
             this.gl.enable(this.gl.DEPTH_TEST)
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[obj.color]);
-            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[obj.color].itemSize, this.gl.FLOAT, false, 0, 0);
+            
+            if (Physico.patriotMode)    {
+                color = Physico.ObjectList.colors.length;
+            }
+            else color = obj.color;
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[color]);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[color].itemSize, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.tBuffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexTextureAttribute, this.tBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.nBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexNormalAttribute, this.nBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            tex = !Physico.trollMode ? this.textures[obj.texture] : this.trolltextures
+            if (Physico.trollMode) {                
+                    texid = obj.texture
+                    while ( texid > this.trolltextures.length - 1) 
+                        texid -= this.trolltextures.length
+                    if (texid < 0) texid = 0;
+                    tex = tex[texid];
+            }    
+            
+            this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+            this.gl.uniform1i(this.shaderProgram.uSamplerUniform, 0);
+            
             this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
             this.setMatrixUniforms();
             this.gl.drawElements(this.gl.TRIANGLES, this.iBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
             
-            this.gl.disable(this.gl.DEPTH_TEST)
-	        this.gl.enable(this.gl.BLEND);
-
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
-            this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+            
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-            this.setMatrixUniforms();
-
-	        this.gl.disable(this.gl.BLEND)
-
         }
     },
-    init: function()    {
+    useTextures: 1,
+    textures: [],
+    texturePrefix: 'textures/',
+    textureSources: null,
+    clasicPrefix: 'clasicmode/',
+    trolltextures: [],
+    trolltextureSources: null,
+    trollPrefix: 'trollmode/',
+    toggleTroll: function() {
+        if (Physico.trollMode) Physico.trollMode = 0
+        else Physico.trollMode = 1;
+    },
+    togglePatriot: function()   {
+        if (Physico.patriotMode)    Physico.patriotMode = 0;
+        else Physico.patriotMode = 1;
+    },
+    toggleTextures: function()   {
+        if (Physico.GL.useTextures)    Physico.GL.useTextures = 0;
+        else Physico.GL.useTextures = 1;
+    },
+    initTextures: function(cont)    {
+        if (!cont)  {            
+            CL.DynamicFileLoader.addLib('clasictextures', Physico.prefix + this.texturePrefix + this.clasicPrefix + 'list.js')
+            CL.DynamicFileLoader.addLib('trolltextures', Physico.prefix + this.texturePrefix + this.trollPrefix + 'list.js')
+            CL.DynamicFileLoader.processQueue(function(){Physico.GL.initTextures(true)})
+        }   else    {
+            this.textureSources = this.processTextureSourceInput(this.textureSources)
+            this.trolltextureSources = this.processTextureSourceInput(this.trolltextureSources)
+            this.loadTextures()
+        }
+    },
+    processTextureSourceInput: function(tex)  {
+        var r = [];
+        for(var i = 0; i < tex.number; i++)  {
+            r[i] = tex.files[i]; 
+        }
+        return r;
+    },
+    loadTextures: function()    {
+        for(i = 0; i < this.textureSources.length; i++) {            
+            this.textures[i] = this.gl.createTexture();
+            this.textures[i].image = new Image();
+            this.textures[i].image.id = i;
+            this.textures[i].image.onload = function()  {
+                Physico.GL.loadTexture(this.id, 'textures');
+            }
+            this.textures[i].image.src = Physico.prefix + this.texturePrefix + this.clasicPrefix + this.textureSources[i];
+        }
+        for(i = 0; i < this.trolltextureSources.length; i++)    {
+            this.trolltextures[i] = this.gl.createTexture();
+            this.trolltextures[i].image = new Image();
+            this.trolltextures[i].image.id = i;
+            this.trolltextures[i].image.onload = function()  {
+                Physico.GL.loadTexture(this.id, 'trolltextures');
+            }
+            this.trolltextures[i].image.src = Physico.prefix + this.texturePrefix + this.trollPrefix + this.trolltextureSources[i];
+        }    
+        this.callback();
+    },
+    loadTexture: function(tex, from) {
+        texture = this[from][tex];
+        image = texture.image
+            var canvas = document.createElement("canvas")
+            canvas.width = 1024
+            canvas.height = 512
+            var ctx = canvas.getContext("2d")
+            ctx.fillStyle = ctx.createPattern(image, "repeat")
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            image = canvas 
+        this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, image);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.REPEAT);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.REPEAT);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+    },
+    init: function(cb)    {
+        this.callback = cb;
         this.initGL();
         this.initShaders();
         this.initBuffer();
+        this.initTextures();
     }
 }
 
-Physico.musicPlayer = {
-player: null,
-source: null,
-tracks: null,
-prefix: 'tracks/',
-init: function()    {
-    var mp = Physico.musicPlayer;
-    CL.DynamicFileLoader.addLib('tracklist', "tracks/list.js")
-    CL.DynamicFileLoader.processQueue(Physico.musicPlayer.load)
-},
-load: function()	{
-    var mp = Physico.musicPlayer;
-    mp.player = document.createElement('audio')
-    mp.player.ended = Physico.musicPlayer.shuffle() 
-    document.body.appendChild(mp.player)
-    mp.shuffle()
-},
-shuffle: function() {
-    var mp = Physico.musicPlayer;
-    mp.player.pause();
-    track = Math.round(Math.random() * (mp.tracks.number - 1));
-    track = mp.tracks.tracks[track]
-    mp.player.src = Physico.prefix + mp.prefix + track;
-    mp.player.play();
-}
-}
 
 
 

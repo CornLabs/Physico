@@ -4,8 +4,16 @@ precision highp float;
 
 varying vec4 vColor;
 varying vec3 vLightWeighting;
+varying vec2 vTexture;
+
+uniform sampler2D uSampler;
+uniform bool useTexture;
 
 void main(void) {
     vec3 color = vec3(vColor);
-    gl_FragColor = vec4(color * vLightWeighting, vColor.a);
+    if (useTexture) {
+        vec4 texColor = texture2D(uSampler, vec2(vTexture.s, vTexture.t));
+        vec4 finalColor =  vec4(color * vLightWeighting * texColor.rgb, vColor.a);
+        gl_FragColor = finalColor;
+    }   else  gl_FragColor = vec4(color * vLightWeighting, vColor.a);
 }
