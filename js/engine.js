@@ -1,9 +1,10 @@
+console.log("Loaded Physico");
 Physico = {
     canvas: null,
     menu: null,
     runningNativeMode: false,
     guiScript: "gui",
-    prefix: "",
+    prefix: "/",
     init: function () {
         console.log("Initializing Physico");
         document.body.innerHTML = "";
@@ -92,7 +93,7 @@ Physico = {
                 }
                 if (typeof(GUI.finishLoad) == "function") GUI.finishLoad();
                 Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
-		console.log("Done Loading Physico");
+		console.log("Done Loading Physico")
                 Physico.GL.drawScene();
             });
 	},
