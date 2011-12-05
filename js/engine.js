@@ -88,10 +88,10 @@ Physico = {
                 Physico.Animator.AnimationTimer = new Physico.Timer();
                 Physico.Animator.AnimationTimer.animate = function () {
                     for (obj in Physico.ObjectList.objects) Physico.ObjectList.objects[obj].applicator.appForces(obj);
-                        Physico.GL.drawScene();
                 }
                 if (typeof(GUI.finishLoad) == "function") GUI.finishLoad();
-                Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);   
+                Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
+                Physico.GL.drawScene();
             });
 	},
     timers: [],
@@ -149,11 +149,27 @@ Physico.dragTimer.prototype.drag = function () {
 Physico.ObjectList = {
     objects: [],
     head: 0,
-    addObjects: function(many)  {
-        for(i = 0; i < many; i++) this.addObject();  
+    addObjects: function(many, id)  {
+        id = id ? id : 0;
+        if (id < many)  {
+            Physico.ObjectList.addObject();
+            Physico.ObjectList.addObjects(many, id+1)
+        }
     },
-    addObject: function () {
-        this.objects[this.head] = new Physico.Object(this.head);
+    addObject: function (x, y, z, c) {
+        q = Math.round(Math.random() * 4);
+        if (!x) {
+            x = Math.round(Math.random() * 25);
+            if(q == 2 || q == 3) x = -x;
+        }
+        if (!y) {
+            y = Math.round(Math.random() * 25);
+            if(q == 3 || q == 4) y = -y;
+        }
+        z = !z ? Math.random() * 50 : z;
+        c = !c ? Math.round(Math.random() * (Physico.ObjectList.colors.length - 1)) : c;
+        t = Math.round(Math.random() * (Physico.GL.textureSources.length - 1));
+        this.objects[this.head] = new Physico.Object(this.head, x, y, z, c, t);
         this.head++;
     },
     removeObject: function()	{
@@ -321,11 +337,15 @@ Physico.Animator.ToggleEnvForce = function (force) {
     }
 }
 
-Physico.Object = function(number) {
+Physico.Object = function(number, x, y, z, c, t) {
     
     this.id = number;
-    this.color = Math.round(Math.random() * (Physico.ObjectList.colors.length - 1));
-    this.texture = Math.round(Math.random() * (Physico.GL.textureSources.length - 1));
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.color = c;
+    this.texture = t;
+    this.idBuffer = Physico.GL.getIDBuffer(this.id);
     
     this.scramble = function()	{
         q = Math.round(Math.random() * 4); 
@@ -336,7 +356,6 @@ Physico.Object = function(number) {
         this.z = Math.random() * 50
     }
 
-    this.scramble(); 
     this.ix = this.x;
     this.iy = this.y;
 	
@@ -452,6 +471,7 @@ Physico.GL = {
         this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, "uLightingDirection");
         this.shaderProgram.isObject = this.gl.getUniformLocation(this.shaderProgram, "isObject");
         this.shaderProgram.useTexture = this.gl.getUniformLocation(this.shaderProgram, "useTexture");
+        this.shaderProgram.isWall = this.gl.getUniformLocation(this.shaderProgram, "isWall");
     },
     initBuffer: function(){
         var latitudeBands = 30;
@@ -576,7 +596,7 @@ Physico.GL = {
             sin = Math.sin(angle);
             cos = Math.cos(angle);
             vertices.push(cos, sin, 0);
-            vertices.push(cos + 0.025, sin + 0.025, 0);
+            vertices.push(cos + 0.25, sin + 0.25, 0);
         }
         this.pbBuffer.numItems = 202;
         vertices = new Float32Array(vertices);
@@ -587,8 +607,8 @@ Physico.GL = {
         var angle;
         vertices = []
         for(i = 0; i <= 100; i++)   {
-            vertices.push(0.0, 0.0, 0.0, 1.0);
-            vertices.push(0.0, 0.0, 0.0, 0.0);
+            vertices.push(0.0, 0.7, 1.0, 1.0);
+            vertices.push(0.0, 0.7, 1.0, 0.0);
         }
         this.cbBuffer.numItems = 202;
         vertices = new Float32Array(vertices);
@@ -616,28 +636,85 @@ Physico.GL = {
 	    this.lbc.numItems = 4;
 	    this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW)
     },
-    drawScene: function() {
-        this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-        this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
-        
-        mat4.perspective(30, window.innerWidth / window.innerHeight, 0.1, 9999.0, this.pMatrix);
-        mat4.identity(this.mvMatrix);
-        mat4.toInverseMat3(this.mvMatrix, this.normalMatrix);
-        mat3.transpose(this.normalMatrix);
-        this.gl.uniformMatrix3fv(this.shaderProgram.nMatrixUniform, false, this.normalMatrix);
-        
-        mat4.translate(this.mvMatrix, Physico.scene)
-        mat4.rotate(this.mvMatrix, Physico.rotate[0], [1, 0, 0]);
-        mat4.rotate(this.mvMatrix, Physico.rotate[1], [0, 1, 0]);
-        mat4.rotate(this.mvMatrix, Physico.rotate[2], [0, 0, 1]);
+    getIDBuffer: function(id) {
+        var vertices = [];
+        var latitudeBands = 30;
+        var longitudeBands = 30;
+	var r = 0, g = 0, b = 0;
+	b = id;
+	g = parseInt(b / 255);
+	console.log(g)
+	b = b - g * 255;
+	g = g - r * 255;
+        for(i = 0; i <= latitudeBands; i++)
+            for(k = 0; k <= longitudeBands; k++)
+                for(p = 0; p < 3; p++)
+                    vertices.push(r / 255, g / 255, b / 255, 1);
+        var cBuffer;
+        cBuffer = this.gl.createBuffer();
+        v = new Float32Array(vertices);
 
-        this.printPlanes();
-        this.printObjects();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, cBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);
+        cBuffer.numItems = latitudeBands * longitudeBands;
+        cBuffer.itemSize = 4;
+
+        return cBuffer;
+    },
+    drawScene: function() {
+        var exec = function(){
+
+            this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+            this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+            this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
+
+            mat4.perspective(30, window.innerWidth / window.innerHeight, 0.1, 9999.0, this.pMatrix);
+            mat4.identity(this.mvMatrix);
+            mat4.toInverseMat3(this.mvMatrix, this.normalMatrix);
+            mat3.transpose(this.normalMatrix);
+            this.gl.uniformMatrix3fv(this.shaderProgram.nMatrixUniform, false, this.normalMatrix);
+
+            mat4.translate(this.mvMatrix, Physico.scene)
+            mat4.rotate(this.mvMatrix, Physico.rotate[0], [1, 0, 0]);
+            mat4.rotate(this.mvMatrix, Physico.rotate[1], [0, 1, 0]);
+            mat4.rotate(this.mvMatrix, Physico.rotate[2], [0, 0, 1]);
+
+            this.printPlanes();
+            this.printObjects();
+
+            if (this.readTick)  {
+                var pixels = new Uint8Array(8);
+                x = this.readQueue.x
+                y = window.innerHeight-this.readQueue.y
+                this.gl.readPixels( this.readQueue.x, window.innerHeight - this.readQueue.y, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixels)
+                this.readTick = 0;
+		if (pixels[3] == 255)	{
+		console.log(pixels[0] * 255 * 255 + pixels[1] * 255 + pixels[2]);
+			//mat4.translate(this.mvMatrix, [-Physico.scene[0], -Physico.scene[1], -Physico.scene[2]])
+			//mat4.rotate(this.mvMatrix, -Physico.rotate[0], [1, 0, 0]);
+			//mat4.rotate(this.mvMatrix, -Physico.rotate[1], [0, 1, 0]);
+			//mat4.rotate(this.mvMatrix, -Physico.rotate[2], [0, 0, 1]);
+			var currentObjectClicked = pixels[0] * 255 * 255 + pixels[1] * 255 + pixels[2];
+			if (this.selectedObject == currentObjectClicked)	this.selectedObject = null;
+			else this.selectedObject = currentObjectClicked;
+			//this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pbBuffer);
+			//this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+			//this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
+			//this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+			//this.setMatrixUniforms()
+			//this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.pbBuffer.itemSize);
+		}
+            }
+
+            window.requestAnimFrame(Physico.GL.drawScene)
+        }.bind(Physico.GL)
+        return exec();
 
     },
+selectedObject: null,
     printPlanes: function() {
         this.gl.disable(this.gl.DEPTH_TEST);
+        this.gl.uniform1i(this.shaderProgram.isWall, 1);
         this.gl.uniform1i(this.shaderProgram.isObject, 0);
 
 	    this.gl.enable(this.gl.BLEND);
@@ -658,8 +735,10 @@ Physico.GL = {
 
 		this.gl.disable(this.gl.BLEND)
 		this.gl.disable(this.gl.DEPTH_TEST);
+        this.gl.uniform1i(this.shaderProgram.isWall, 0);
     },
     printObjects: function()    {
+        var buffer = null;
         for (obj in Physico.ObjectList.objects) {
             this.gl.uniform1i(this.shaderProgram.isObject, 1);
             this.gl.uniform1i(this.shaderProgram.useTexture, this.useTextures)
@@ -671,37 +750,44 @@ Physico.GL = {
             this.gl.enable(this.gl.DEPTH_TEST)
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-            
-            if (Physico.patriotMode)    {
+
+	    var sel = this.selectedObject != null && this.selectedObject == obj.id
+            if (Physico.patriotMode || sel)    {
                 color = Physico.ObjectList.colors.length;
             }
-            else color = obj.color;
+            else color = obj.color; 
+            if (this.readTick)  {
+                this.gl.uniform1i(this.shaderProgram.isObject, 0);
+                this.gl.uniform1i(this.shaderProgram.useTexture, 0);
+                buffer = obj.idBuffer;
+            } else buffer = this.cBuffer[color]
 
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[color]);
-            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cBuffer[color].itemSize, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+            this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, buffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.tBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexTextureAttribute, this.tBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.nBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexNormalAttribute, this.nBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
             this.gl.activeTexture(this.gl.TEXTURE0);
-            tex = !Physico.trollMode ? this.textures[obj.texture] : this.trolltextures
-            if (Physico.trollMode) {                
+            tex = Physico.trollMode || sel ? this.trolltextures : this.textures[obj.texture]            
+
+	    if (Physico.trollMode || sel) {
                     texid = obj.texture
-                    while ( texid > this.trolltextures.length - 1) 
+                    while ( texid > this.trolltextures.length - 1)
                         texid -= this.trolltextures.length
                     if (texid < 0) texid = 0;
                     tex = tex[texid];
-            }    
-            
+            }
+
             this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
             this.gl.uniform1i(this.shaderProgram.uSamplerUniform, 0);
-            
+
             this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
             this.setMatrixUniforms();
             this.gl.drawElements(this.gl.TRIANGLES, this.iBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
-            
-            
+
+
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cbBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.cbBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
         }
@@ -784,6 +870,15 @@ Physico.GL = {
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.REPEAT);
         this.gl.bindTexture(this.gl.TEXTURE_2D, null);
     },
+    readQueue: {
+        "x": 0,
+        "y": 0
+    },
+    readTick: 0,
+    getPixels: function(o)    {
+        this.readQueue = o;
+        this.readTick = 1;
+    },
     init: function(cb)    {
         this.callback = cb;
         this.initGL();
@@ -793,7 +888,24 @@ Physico.GL = {
     }
 }
 
+if (typeof(Function.prototype.bind) != "function")
+    Function.prototype.bind = function(scope) {
+          var _function = this;
 
+          return function() {
+            return _function.apply(scope, arguments);
+          }
+    }
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          window.oRequestAnimationFrame      ||
+          window.msRequestAnimationFrame     ||
+          function(/* function */ callback, /* DOMElement */ element){
+            window.setTimeout(callback, 10);
+          };
+})();
 
 
 window.onresize = function()    {

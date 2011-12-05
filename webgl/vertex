@@ -20,8 +20,10 @@ void main(void) {
     vec3 transNormal = uNMatrix * vertexNormal;
     float direcLightWeighting = max(dot(transNormal, uLightingDirection), 0.0);
     vec3 colors;
-    if (isObject) colors = vec3(0.6, 0.6, 0.6);
-    else colors = vec3(1, 1, 1);
-    vLightWeighting = colors + colors * direcLightWeighting;
+    if (isObject) {
+        colors = vec3(0.6, 0.6, 0.6);
+        vLightWeighting = colors + colors * direcLightWeighting;
+    }
+    else vLightWeighting = vec3(1, 1, 1);
     vTexture = vertexTexture;
 }

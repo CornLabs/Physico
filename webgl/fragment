@@ -8,9 +8,11 @@ varying vec2 vTexture;
 
 uniform sampler2D uSampler;
 uniform bool useTexture;
+uniform bool isWall;
 
 void main(void) {
     vec3 color = vec3(vColor);
+    if (isWall) color = vec3(0, 0, 0);
     if (useTexture) {
         vec4 texColor = texture2D(uSampler, vec2(vTexture.s, vTexture.t));
         vec4 finalColor =  vec4(color * vLightWeighting * texColor.rgb, vColor.a);

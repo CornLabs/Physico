@@ -8,11 +8,25 @@ GUI = {
         document.addEventListener( 'touchend', GUI.sendEvents['end'], false);
         if (typeof(callback) == "function") callback();
     },
+	isSingleTap: 0,
+	decideTap: function() {
+		console.log(GUI.isSingleTap)
+		console.log(GUI.lastPosition.x)
+		console.log(GUI.lastPosition.y);
+		if (GUI.isSingleTap) Physico.GL.getPixels(GUI.lastPosition)
+	},
+	lastPosition: {
+		"x": 0,
+		"y": 0
+	},
     sendEvents: {
         "start": function(e) {
             GUI.accel = [0, 0, 0];
             GUI.dragPosition = GUI.getCoords(e);
+            GUI.lastPosition = GUI.dragPosition
             if (e.touches && e.touches.length > 2)  GUI.sendEvent("startTouch", "");   
+            GUI.isSingleTap = true
+            setTimeout("GUI.decideTap()", 100);
             e.preventDefault();
         },
         "cancel": function(e) {  
@@ -21,6 +35,7 @@ GUI = {
         },
         "move": function(e) {
             c = GUI.getCoords(e);
+	    GUI.isSingleTap = false;
             if (e.touches.length == 1)  {
                 var x = (c.x - GUI.dragPosition.x) / 400, y = (c.y - GUI.dragPosition.y) / 400;
                 GUI.accel[0] = x - (x * 0.15 + GUI.accel[0] * (1.0 - 0.15));

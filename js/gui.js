@@ -31,17 +31,14 @@ GUI = {
                 Physico.rotate[0] += GUI.accel[1];
                 Physico.rotate[1] += GUI.accel[0];
             }   else    {
-                console.log(Physico.scene);
                 Physico.scene[0] += GUI.accel[0]; 
                 Physico.scene[1] -= GUI.accel[1];        
             }
-            console.log(alter);
             Physico.scene[2] += GUI.accel[2];
             setTimeout("GUI.continueTransition(" + alter + ")", 10);
         }   else    {
             GUI.continueCount = 0;
             GUI.accel = [0, 0, 0]
-            console.log(alter)
         }
     },
     finishLoad: function()  {
@@ -68,8 +65,10 @@ GUI = {
             GUI.accel = [0, 0, 0]
             Physico.rotationChange = 0;
             if (e.button == 2)  Physico.rotationChange = 1;
-            Physico.sceneDrag = Physico.getMouseCoords(e);            
+            c = Physico.getMouseCoords(e)
+            Physico.sceneDrag = c;
             this.style.cursor = "pointer"
+            if (e.button != 2)  Physico.GL.getPixels(c)
         }
         Physico.canvas.onmouseup = function(e) {
             GUI.continueTransition(Physico.rotationChange)
@@ -317,7 +316,6 @@ GUI = {
 	},
 	createMenu: function(object)  {
 		var r = document.createElement("ul")
-		console.log(object)
 
 		for(o in object)    {
 			var e = document.createElement("li")
