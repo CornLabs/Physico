@@ -6,7 +6,7 @@ Physico = {
     guiScript: "gui",
     prefix: "/",
     init: function () {
-        console.log("Initializing Physico");
+        console.log("startingLoad");
         document.body.innerHTML = "";
 		s = document.createElement("script")
 		s.src = Physico.prefix + "js/libs/cl/CLFramework.js"	
@@ -93,7 +93,7 @@ Physico = {
                 }
                 if (typeof(GUI.finishLoad) == "function") GUI.finishLoad();
                 Physico.Animator.AnimationTimer.startTimer(Physico.Animator.AnimationTimer.animate);
-		console.log("Done Loading Physico")
+                console.log("doneLoading")
                 Physico.GL.drawScene();
             });
 	},
