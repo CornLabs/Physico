@@ -11,8 +11,9 @@ Physico = {
 		s = document.createElement("script")
 		s.src = Physico.prefix + "js/libs/cl/CLFramework.js"	
         s.onload = function()	{
-                        CL.Framework.runningNative = true;
+            CL.Framework.runningNative = true;
 			CL.Framework.modulesDir = Physico.prefix + "js/libs/cl/"
+            console.log("loadingGUI");
 			CL.Framework.init(function() {
 				CL.DynamicFileLoader.addLib("screen", Physico.prefix + "css/screen.css")
 				CL.DynamicFileLoader.addLib("glMatrix", Physico.prefix + "js/glMatrix-0.9.5.min.js")
@@ -154,10 +155,11 @@ Physico.ObjectList = {
     head: 0,
     addObjects: function(many, id)  {
         id = id ? id : 0;
+        if (id == 0)    console.log("startedAddingObjects");
         if (id < many)  {
             Physico.ObjectList.addObject();
             Physico.ObjectList.addObjects(many, id+1)
-        }
+        }   else console.log("addedObjects");
     },
     addObject: function (x, y, z, c) {
         q = Math.round(Math.random() * 4);
@@ -174,14 +176,20 @@ Physico.ObjectList = {
         t = Math.round(Math.random() * (Physico.GL.textureSources.length - 1));
         this.objects[this.head] = new Physico.Object(this.head, x, y, z, c, t);
         this.head++;
+        console.log("addedObject");
     },
     removeObject: function()	{
         this.objects[0].terminate();
         this.objects.splice(0, 1);
         this.head--;
+        console.log("addedObject");
     },
-	removeObjects: function(many)   {
-        for(i = 0; i < many; i++) this.removeObject();
+    removeObjects: function(many)   {
+        id = id ? id : 0;
+        if (id < many)  {
+            Physico.ObjectList.removeObject();
+            Physico.ObjectList.removeObjects(many, id+1)
+        }   else console.log("removedObjects");
 	},
     scrambleObjects: function(){
         for(o in this.objects) this.objects[o].scramble();
