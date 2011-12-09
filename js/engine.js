@@ -356,7 +356,12 @@ Physico.Object = function(number, x, y, z, c, t) {
     this.z = z;
     this.color = c;
     this.texture = t;
-    this.idBuffer = Physico.GL.getIDBuffer(this.id);
+    
+    this.b = this.id;
+    this.g = parseInt(this.b / 255);
+    this.b = this.b - this.g * 255;
+    this.r = parseInt(this.g / 255);
+    this.g = this.g - this.r * 255;
     
     this.scramble = function()	{
         q = Math.round(Math.random() * 4); 
@@ -483,6 +488,10 @@ Physico.GL = {
         this.shaderProgram.isObject = this.gl.getUniformLocation(this.shaderProgram, "isObject");
         this.shaderProgram.useTexture = this.gl.getUniformLocation(this.shaderProgram, "useTexture");
         this.shaderProgram.isWall = this.gl.getUniformLocation(this.shaderProgram, "isWall");
+        this.shaderProgram.colorTintR = this.gl.getUniformLocation(this.shaderProgram, "colorTintR");
+        this.shaderProgram.colorTintG = this.gl.getUniformLocation(this.shaderProgram, "colorTintG");
+        this.shaderProgram.colorTintB = this.gl.getUniformLocation(this.shaderProgram, "colorTintB");
+        this.shaderProgram.colorTintA = this.gl.getUniformLocation(this.shaderProgram, "colorTintA");
     },
     initBuffer: function(){
         var latitudeBands = 30;
@@ -533,34 +542,19 @@ Physico.GL = {
                 indexData.push(first + 1);
               }
             }
-        var vertices = [];
-        for (j = 0; j < Physico.ObjectList.colors.length; j++)  {
-            vertices[j] = [];
-            for(i = 0; i <= latitudeBands; i++)
-                for(k = 0; k <= longitudeBands; k++)
-                    for(p = 0; p < 3; p++)
-                        vertices[j].push(Physico.ObjectList.colors[j][1][0], Physico.ObjectList.colors[j][1][1], Physico.ObjectList.colors[j][1][2], Physico.ObjectList.colors[j][1][3])
-
-        }
-        vertices[j] = [];
-        var c = 1;
+        
+        vertices = [];
         for(i = 0; i <= latitudeBands; i++)
             for(k = 0; k <= longitudeBands; k++)
-                    if (i < latitudeBands / 3)  vertices[j].push(1, 0, 0, 1)
-                    else if (i < latitudeBands / 3 * 2)  vertices[j].push(0.5, 0.6, 0, 1)
-                    else vertices[j].push(0, 0, 1, 1)
-        for(i = 0; i <= latitudeBands * longitudeBands; i++) for(p = 0; p < 2; p ++) vertices[j].push(0, 0, 0, 0)
-        this.cBuffer = [];
-
-        for(j = 0; j < Physico.ObjectList.colors.length + 1; j++)   {
-            this.cBuffer[j] = this.gl.createBuffer();
-            v = new Float32Array(vertices[j]);
-
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer[j]);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);
-            this.cBuffer[j].numItems = latitudeBands * longitudeBands;
-            this.cBuffer[j].itemSize = 4;
-        }
+                for(p = 0; p < 3; p++)
+                    vertices.push(1, 1, 1, 1);
+        this.cBuffer = this.gl.createBuffer();
+        v = new Float32Array(vertices);
+        
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);
+        this.cBuffer.numItems = latitudeBands * longitudeBands;
+        this.cBuffer.itemSize = 4;
 
         this.pBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
@@ -647,31 +641,6 @@ Physico.GL = {
 	    this.lbc.numItems = 4;
 	    this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW)
     },
-    getIDBuffer: function(id) {
-        var vertices = [];
-        var latitudeBands = 30;
-        var longitudeBands = 30;
-	var r = 0, g = 0, b = 0;
-	b = id;
-	g = parseInt(b / 255);
-	console.log(g)
-	b = b - g * 255;
-	g = g - r * 255;
-        for(i = 0; i <= latitudeBands; i++)
-            for(k = 0; k <= longitudeBands; k++)
-                for(p = 0; p < 3; p++)
-                    vertices.push(r / 255, g / 255, b / 255, 1);
-        var cBuffer;
-        cBuffer = this.gl.createBuffer();
-        v = new Float32Array(vertices);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, cBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, v, this.gl.STATIC_DRAW);
-        cBuffer.numItems = latitudeBands * longitudeBands;
-        cBuffer.itemSize = 4;
-
-        return cBuffer;
-    },
     drawScene: function() {
         var exec = function(){
 
@@ -722,7 +691,7 @@ Physico.GL = {
         return exec();
 
     },
-selectedObject: null,
+    selectedObject: null,
     printPlanes: function() {
         this.gl.disable(this.gl.DEPTH_TEST);
         this.gl.uniform1i(this.shaderProgram.isWall, 1);
@@ -733,6 +702,10 @@ selectedObject: null,
 		this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.lb.itemSize, this.gl.FLOAT, false, 0, 0);
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.lbc);
 		this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.lbc.itemSIze, this.gl.FLOAT, false, 0, 0);
+        this.gl.uniform1f(this.shaderProgram.colorTintR, 0);
+        this.gl.uniform1f(this.shaderProgram.colorTintG, 0);
+        this.gl.uniform1f(this.shaderProgram.colorTintB, 0);
+        this.gl.uniform1f(this.shaderProgram.colorTintA, 0.1);
 		this.setMatrixUniforms();
 		this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, this.lb.numItems);
 		mat4.rotate(this.mvMatrix, Math.PI / 2, [0, 1, 0])
@@ -762,7 +735,7 @@ selectedObject: null,
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pBuffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.pBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-	    var sel = this.selectedObject != null && this.selectedObject == obj.id
+            var sel = this.selectedObject != null && this.selectedObject == obj.id
             if (Physico.patriotMode || sel)    {
                 color = Physico.ObjectList.colors.length;
             }
@@ -770,8 +743,14 @@ selectedObject: null,
             if (this.readTick)  {
                 this.gl.uniform1i(this.shaderProgram.isObject, 0);
                 this.gl.uniform1i(this.shaderProgram.useTexture, 0);
-                buffer = obj.idBuffer;
-            } else buffer = this.cBuffer[color]
+                tint = [obj.r / 255, obj.g / 255, obj.b / 255, 1];
+            } else tint = Physico.ObjectList.colors[obj.color][1];
+            buffer = this.cBuffer
+                
+            this.gl.uniform1f(this.shaderProgram.colorTintR, tint[0]);
+            this.gl.uniform1f(this.shaderProgram.colorTintG, tint[1]);
+            this.gl.uniform1f(this.shaderProgram.colorTintB, tint[2]);
+            this.gl.uniform1f(this.shaderProgram.colorTintA, tint[3]);
 
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
             this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, buffer.itemSize, this.gl.FLOAT, false, 0, 0);

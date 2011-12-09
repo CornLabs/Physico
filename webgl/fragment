@@ -9,9 +9,13 @@ varying vec2 vTexture;
 uniform sampler2D uSampler;
 uniform bool useTexture;
 uniform bool isWall;
+uniform float colorTintR;
+uniform float colorTintG;
+uniform float colorTintB;
+uniform float colorTintA;
 
 void main(void) {
-    vec3 color = vec3(vColor);
+    vec3 color = vec3(colorTintR, colorTintG, colorTintB);
     if (isWall) color = vec3(0, 0, 0);
     if (useTexture) {
         vec4 texColor = texture2D(uSampler, vec2(vTexture.s, vTexture.t));

@@ -359,7 +359,6 @@ GUI = {
             track = Math.round(Math.random() * (mp.tracks.number - 1));
             track = mp.tracks.files[track]
             mp.player.src = Physico.prefix + mp.prefix + track;
-            mp.player.play();
         }
     }
 
